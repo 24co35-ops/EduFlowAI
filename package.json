@@ -1,0 +1,15 @@
+{
+  "name": "eduflow-ai",
+  "version": "1.0.0",
+  "description": "EduFlow AI — Intelligent Course Content Automation Tool powered by IBM BOB (watsonx.ai)",
+  "main": "server/server.js",
+  "scripts": {
+    "server": "npm run dev --prefix server",
+    "client": "npm run dev --prefix client",
+    "install:all": "npm install --prefix server && npm install --prefix client",
+    "dev": "concurrently \"npm run dev --prefix server\" \"npm run dev --prefix client\""
+  },
+  "keywords": ["education", "ai", "watsonx", "ibm-bob", "react", "express", "mongodb"],
+  "author": "EduFlow Team",
+  "license": "MIT"
+}
