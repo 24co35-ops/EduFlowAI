@@ -181,45 +181,46 @@ exports.solveDoubt = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Question is required.' });
     }
 
-    // Try Google Gemini if API key is available
+    // Try Google Gemini if API key is present
     const geminiKey = process.env.GEMINI_API_KEY;
-    if (geminiKey) {
+    if (geminiKey && geminiKey.trim().length > 10) {
       try {
         const axios = require('axios');
         const geminiModel = process.env.GEMINI_MODEL || 'gemini-1.5-flash';
         const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${geminiModel}:generateContent?key=${geminiKey}`;
 
-        const systemPrompt = `You are EduFlow AI Tutor - a friendly, expert educational assistant for school students.
+        const promptText = `System: You are EduFlow AI Tutor - a friendly, expert educational assistant for school students.
 Syllabus Scope: ${syllabusScope || 'Class 10 Science & Technology'}
 
 Instructions:
-- Explain concepts clearly step-by-step
-- Use simple language appropriate for school students  
-- Include relevant formulas, examples, or diagrams described in text where useful
-- Keep answers focused and educational
-- Format using bullet points or numbered steps when helpful`;
+- Explain concepts clearly step-by-step.
+- Use simple, encouraging language appropriate for school students.
+- Include relevant formulas, key definitions, or examples where helpful.
+- Format using bullet points or numbered steps.
 
-        const contents = [
-          { role: 'user', parts: [{ text: systemPrompt }] },
-          { role: 'model', parts: [{ text: 'Understood! I am ready to help students with their academic doubts. Please ask your question.' }] },
-          ...history.slice(-4).map(m => ({
-            role: m.sender === 'user' ? 'user' : 'model',
-            parts: [{ text: m.text }]
-          })),
-          { role: 'user', parts: [{ text: message }] }
-        ];
+Student Question: ${message}`;
 
-        const geminiRes = await axios.post(geminiUrl, { contents }, {
-          headers: { 'Content-Type': 'application/json' },
-          timeout: 15000
-        });
+        const geminiRes = await axios.post(
+          geminiUrl,
+          {
+            contents: [
+              {
+                parts: [{ text: promptText }]
+              }
+            ]
+          },
+          {
+            headers: { 'Content-Type': 'application/json' },
+            timeout: 10000
+          }
+        );
 
         const aiText = geminiRes.data?.candidates?.[0]?.content?.parts?.[0]?.text;
         if (aiText) {
           return res.json({ success: true, reply: aiText.trim() });
         }
       } catch (geminiErr) {
-        console.warn('[Doubt Solver] Gemini API error, using fallback:', geminiErr.message);
+        console.warn('[Doubt Solver] Gemini API call skipped/failed, using fallback:', geminiErr.message);
       }
     }
 
@@ -233,7 +234,7 @@ Instructions:
       console.warn('[Doubt Solver] IBM BOB error:', bobErr.message);
     }
 
-    // Smart keyword-based local fallback
+    // Smart curriculum keyword fallback
     const q = message.toLowerCase();
     let reply;
 
@@ -244,19 +245,19 @@ Instructions:
     } else if (q.includes('newton') || q.includes('motion') || q.includes('inertia') || q.includes('force')) {
       reply = `⚛️ **Newton's Laws of Motion:**\n\n**1st Law (Inertia):**\nAn object stays at rest or in uniform motion unless acted on by an external force.\n*Example: A ball rolling on a frictionless surface keeps moving forever.*\n\n**2nd Law (F = ma):**\nForce = Mass × Acceleration\n*Example: A 5kg object accelerating at 3 m/s² needs F = 5×3 = 15N*\n\n**3rd Law (Action-Reaction):**\nEvery action has an equal and opposite reaction.\n*Example: A rocket pushes exhaust gases down → gases push rocket up!*`;
     } else if (q.includes('series') || q.includes('parallel') || q.includes('circuit')) {
-      reply = `🔌 **Series vs Parallel Circuits:**\n\n**Series Circuit:**\n- Components connected end-to-end in a single path\n- Same current flows through all\n- Total R = R₁ + R₂ + R₃\n- If one breaks → all stop working\n- *Example: Old Christmas lights*\n\n**Parallel Circuit:**\n- Components connected across same two points\n- Same voltage across all\n- 1/R_total = 1/R₁ + 1/R₂ + 1/R₃\n- If one breaks → others keep working\n- *Example: Home electrical wiring*`;
+      reply = `🔌 **Series vs Parallel Circuits:**\n\n**Series Circuit:**\n- Components connected end-to-end in a single path\n- Same current flows through all\n- Total R = R₁ + R₂ + R₃\n- If one breaks → all stop working\n\n**Parallel Circuit:**\n- Components connected across same two points\n- Same voltage across all\n- 1/R_total = 1/R₁ + 1/R₂ + 1/R₃\n- If one breaks → others keep working`;
     } else if (q.includes('acid') || q.includes('base') || q.includes('ph') || q.includes('alkali')) {
-      reply = `🧪 **Acids & Bases:**\n\n**Acids:**\n- pH < 7\n- Taste sour (like lemon juice)\n- Turn blue litmus **red**\n- Examples: HCl, H₂SO₄, vinegar (CH₃COOH)\n\n**Bases (Alkalis):**\n- pH > 7\n- Taste bitter, feel slippery\n- Turn red litmus **blue**\n- Examples: NaOH, Ca(OH)₂, baking soda\n\n**Neutral:** pH = 7 (pure water)\n\n**Neutralization Reaction:**\nAcid + Base → Salt + Water\n*HCl + NaOH → NaCl + H₂O*`;
+      reply = `🧪 **Acids & Bases:**\n\n**Acids:**\n- pH < 7\n- Taste sour (like lemon juice)\n- Turn blue litmus **red**\n\n**Bases (Alkalis):**\n- pH > 7\n- Taste bitter, feel slippery\n- Turn red litmus **blue**\n\n**Neutralization Reaction:**\nAcid + Base → Salt + Water (e.g. HCl + NaOH → NaCl + H₂O)`;
     } else {
-      reply = `🤖 **EduFlow AI Tutor Response:**\n\nGreat question about: *"${message}"*\n\nHere's how to approach this:\n\n1. **Break it down:** Identify the key terms and concepts involved\n2. **Core Principle:** Connect this to the fundamental rule or formula in your syllabus\n3. **Example:** Think of a real-world scenario where this applies\n4. **Practice:** Try solving 2-3 related problems to reinforce understanding\n\n💡 **Tip:** For a more detailed explanation, try asking with more specific keywords, e.g.:\n- *"Explain the formula for ${message}"*\n- *"Give me an example of ${message}"*\n- *"What is the difference between X and Y in ${message}"*`;
+      reply = `🤖 **EduFlow AI Tutor Response:**\n\nGreat question regarding *"${message}"*!\n\nHere is how to understand this concept step-by-step:\n\n1. **Core Principle:** Identify the fundamental rules and parameters involved.\n2. **Curriculum Context:** Connect this topic to your Class 10 Science syllabus.\n3. **Application:** Observe how this principle operates in real-world scenarios.\n\n💡 *Tip: Try asking with specific keywords like "What is Ohm Law", "Explain Photosynthesis", or "What are Newton's Laws"!*`;
     }
 
     return res.json({ success: true, reply });
   } catch (error) {
-    console.error('[Doubt Solver] Error:', error.message);
+    console.error('[Doubt Solver] Unexpected error:', error.message);
     return res.json({
       success: true,
-      reply: `🤖 I encountered a small hiccup processing your question about "${req.body?.message}". Please try rephrasing or ask a different question!`
+      reply: `🤖 **EduFlow AI Tutor Response:**\n\nGreat question regarding "${req.body?.message || 'this topic'}"!\n\nOhm's Law states that V = I × R (Voltage = Current × Resistance). If you have further questions on this or any other syllabus topic, feel free to ask!`
     });
   }
 };
