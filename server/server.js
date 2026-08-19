@@ -20,14 +20,14 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 // Connect to MongoDB
 connectDB();
 
-// API Routes
-app.use('/api/auth', require('./routes/auth.routes'));
-app.use('/api/lessons', require('./routes/lesson.routes'));
-app.use('/api/quizzes', require('./routes/quiz.routes'));
-app.use('/api/student', require('./routes/student.routes'));
+// API Routes (supports both local /api/ path and Vercel serverless / path)
+app.use(['/api/auth', '/auth'], require('./routes/auth.routes'));
+app.use(['/api/lessons', '/lessons'], require('./routes/lesson.routes'));
+app.use(['/api/quizzes', '/quizzes'], require('./routes/quiz.routes'));
+app.use(['/api/student', '/student'], require('./routes/student.routes'));
 
 // Healthcheck
-app.get('/api/health', (req, res) => {
+app.get(['/api/health', '/health'], (req, res) => {
   res.json({
     status: 'online',
     appName: 'EduFlow AI Backend',
@@ -50,10 +50,7 @@ io.on('connection', (socket) => {
   socket.on('send_message', async (data) => {
     try {
       const { message, syllabusScope, history } = data;
-      // Emit immediate thinking status
       socket.emit('bot_status', { status: 'thinking' });
-
-      // Call IBM BOB doubt solver engine
       const bobResponse = await bobService.solveDoubt(message, history || [], syllabusScope || '');
 
       socket.emit('receive_message', {
@@ -77,13 +74,15 @@ io.on('connection', (socket) => {
   });
 });
 
-// Start Server
-const PORT = process.env.PORT || 5000;
-server.listen(PORT, () => {
-  console.log(`==================================================`);
-  console.log(`🚀 EduFlow AI Backend Server running on port ${PORT}`);
-  console.log(`⚡ IBM BOB watsonx.ai Engine: ${bobService.isConfigured() ? 'LIVE API KEY CONNECTED' : 'OFFLINE DEMO MODE (Smart Engine active)'}`);
-  console.log(`==================================================`);
-});
+// Start Server conditionally (only in standalone Node mode, not on Vercel)
+if (process.env.VERCEL !== '1') {
+  const PORT = process.env.PORT || 5000;
+  server.listen(PORT, () => {
+    console.log(`==================================================`);
+    console.log(`🚀 EduFlow AI Backend Server running on port ${PORT}`);
+    console.log(`⚡ IBM BOB watsonx.ai Engine: ${bobService.isConfigured() ? 'LIVE API KEY CONNECTED' : 'OFFLINE DEMO MODE (Smart Engine active)'}`);
+    console.log(`==================================================`);
+  });
+}
 
 module.exports = app;
