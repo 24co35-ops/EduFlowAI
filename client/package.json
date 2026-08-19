@@ -9,6 +9,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@clerk/clerk-react": "^5.61.9",
     "axios": "^1.6.8",
     "chart.js": "^4.4.2",
     "lucide-react": "^0.368.0",

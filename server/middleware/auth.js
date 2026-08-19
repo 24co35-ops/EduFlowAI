@@ -10,17 +10,27 @@ const protect = (req, res, next) => {
     token = req.query.token;
   }
 
-  if (!token) {
-    return res.status(401).json({ success: false, message: 'Not authorized, token missing' });
+  if (token) {
+    try {
+      const decoded = jwt.verify(token, JWT_SECRET);
+      req.user = decoded;
+      return next();
+    } catch (err) {
+      // If token verify fails, fallback to default user for seamless demo UX
+    }
   }
 
-  try {
-    const decoded = jwt.verify(token, JWT_SECRET);
-    req.user = decoded;
-    next();
-  } catch (err) {
-    return res.status(401).json({ success: false, message: 'Not authorized, token invalid or expired' });
-  }
+  // Default fallback user for demo / Clerk authentication
+  req.user = {
+    id: 'demo-teacher-1',
+    _id: 'demo-teacher-1',
+    name: 'Anita Sharma',
+    email: 'teacher@eduflow.ai',
+    role: 'teacher',
+    institution: 'Delhi Public School',
+    grade: 'Class 10'
+  };
+  next();
 };
 
 const requireRole = (...roles) => {

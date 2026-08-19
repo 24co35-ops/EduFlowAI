@@ -14,17 +14,25 @@ import QuizAttemptPage from './pages/QuizAttemptPage';
 import StudentProgressPage from './pages/StudentProgressPage';
 
 export default function App() {
+  const defaultUser = {
+    id: 'demo-teacher-1',
+    name: 'Anita Sharma',
+    email: 'teacher@eduflow.ai',
+    role: 'teacher',
+    institution: 'Delhi Public School',
+    grade: 'Class 10'
+  };
+
   const [user, setUser] = useState(() => {
     const saved = localStorage.getItem('eduflow_user');
-    return saved ? JSON.parse(saved) : {
-      id: 'demo-teacher-1',
-      name: 'Anita Sharma',
-      email: 'teacher@eduflow.ai',
-      role: 'teacher',
-      institution: 'Delhi Public School',
-      grade: 'Class 10'
-    };
+    return saved ? JSON.parse(saved) : defaultUser;
   });
+
+  useEffect(() => {
+    if (!localStorage.getItem('eduflow_user')) {
+      localStorage.setItem('eduflow_user', JSON.stringify(defaultUser));
+    }
+  }, []);
 
   return (
     <BrowserRouter>

@@ -85,3 +85,5 @@ server.listen(PORT, () => {
   console.log(`⚡ IBM BOB watsonx.ai Engine: ${bobService.isConfigured() ? 'LIVE API KEY CONNECTED' : 'OFFLINE DEMO MODE (Smart Engine active)'}`);
   console.log(`==================================================`);
 });
+
+module.exports = app;
