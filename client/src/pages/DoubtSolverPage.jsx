@@ -1,85 +1,92 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useUser } from '@clerk/clerk-react';
 import { 
   Sparkles, 
   Send, 
   Bot, 
   User, 
   MessageSquareCode, 
-  CheckCircle2, 
   HelpCircle,
   Loader2,
   BookOpen
 } from 'lucide-react';
-import { io } from 'socket.io-client';
+import API from '../services/api';
 
 export default function DoubtSolverPage({ user }) {
+  const { user: clerkUser } = useUser();
+  const displayName = clerkUser?.firstName || user?.name || 'Student';
+
   const [messages, setMessages] = useState([
     {
       id: 'msg-init-1',
       sender: 'bob',
-      text: `Hello ${user?.name || 'there'}! 👋 I am your EduFlow AI Tutor powered by IBM BOB (watsonx.ai Granite Chat). \n\nAsk me any doubt from your syllabus, and I'll explain it step-by-step!`,
+      text: `Hello ${displayName}! 👋 I am your EduFlow AI Tutor powered by IBM BOB (watsonx.ai Granite Chat). \n\nAsk me any doubt from your syllabus, and I'll explain it step-by-step!`,
       timestamp: new Date()
     }
   ]);
   const [inputText, setInputText] = useState('');
   const [syllabusScope, setSyllabusScope] = useState('Class 10 Science & Technology Curriculum');
   const [botThinking, setBotThinking] = useState(false);
-  const socketRef = useRef(null);
   const messagesEndRef = useRef(null);
-
-  useEffect(() => {
-    // Initialize Socket.io connection
-    const socket = io('/', { path: '/socket.io' });
-    socketRef.current = socket;
-
-    socket.on('bot_status', (data) => {
-      if (data.status === 'thinking') {
-        setBotThinking(true);
-      }
-    });
-
-    socket.on('receive_message', (data) => {
-      setBotThinking(false);
-      setMessages((prev) => [...prev, data]);
-    });
-
-    return () => {
-      socket.disconnect();
-    };
-  }, []);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, botThinking]);
 
-  const handleSendMessage = (e) => {
+  const handleSendMessage = async (e) => {
     e.preventDefault();
-    if (!inputText.trim()) return;
+    const question = inputText.trim();
+    if (!question || botThinking) return;
 
     const userMsg = {
       id: 'msg-user-' + Date.now(),
       sender: 'user',
-      text: inputText,
+      text: question,
       timestamp: new Date()
     };
 
-    setMessages((prev) => [...prev, userMsg]);
+    setMessages(prev => [...prev, userMsg]);
+    setInputText('');
     setBotThinking(true);
 
-    if (socketRef.current) {
-      socketRef.current.emit('send_message', {
-        message: inputText,
+    try {
+      const res = await API.post('/student/doubt', {
+        message: question,
         syllabusScope,
-        history: messages.slice(-5)
+        history: messages.slice(-6)
       });
-    }
 
-    setInputText('');
+      const botReply = res.data?.reply || 'I could not generate a response. Please try again.';
+      
+      setMessages(prev => [...prev, {
+        id: 'msg-bot-' + Date.now(),
+        sender: 'bob',
+        text: botReply,
+        timestamp: new Date()
+      }]);
+    } catch (err) {
+      setMessages(prev => [...prev, {
+        id: 'msg-err-' + Date.now(),
+        sender: 'bob',
+        text: `⚠️ Connection error. Please check that the server is running and try again.\n\nError: ${err.message}`,
+        timestamp: new Date()
+      }]);
+    } finally {
+      setBotThinking(false);
+    }
   };
 
   const handlePresetQuestion = (qText) => {
     setInputText(qText);
   };
+
+  const PRESET_QUESTIONS = [
+    'Explain Photosynthesis formula',
+    'What is Ohm Law V=IR?',
+    'Explain Newton Third Law',
+    'Difference between Series & Parallel circuits',
+    'What are acids and bases?'
+  ];
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto">
@@ -88,10 +95,10 @@ export default function DoubtSolverPage({ user }) {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 text-xs font-semibold mb-2">
-            <Bot className="w-3.5 h-3.5" /> Feature F4: IBM watsonx.ai Granite Chat
+            <Bot className="w-3.5 h-3.5" /> Feature F4: AI Doubt Solver
           </div>
           <h1 className="text-3xl font-extrabold text-white font-outfit">AI Student Doubt Solver</h1>
-          <p className="text-xs text-slate-400">Curriculum-aligned live doubt tutor powered by IBM BOB</p>
+          <p className="text-xs text-slate-400">Curriculum-aligned live doubt tutor powered by Google Gemini & IBM BOB</p>
         </div>
 
         {/* Scope Tag */}
@@ -127,7 +134,7 @@ export default function DoubtSolverPage({ user }) {
 
                 {/* Message Bubble */}
                 <div
-                  className={`p-4 rounded-2xl text-xs space-y-1.5 border shadow-sm ${
+                  className={`p-4 rounded-2xl text-xs space-y-1.5 border shadow-sm max-w-[80%] ${
                     isUser
                       ? 'bg-emerald-600 text-white border-emerald-500 rounded-tr-none'
                       : 'bg-slate-900 text-slate-200 border-slate-800 rounded-tl-none'
@@ -140,6 +147,9 @@ export default function DoubtSolverPage({ user }) {
                   )}
                   <div className="whitespace-pre-wrap leading-relaxed">
                     {msg.text}
+                  </div>
+                  <div className={`text-[9px] mt-1 ${isUser ? 'text-emerald-200' : 'text-slate-600'}`}>
+                    {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                   </div>
                 </div>
 
@@ -155,7 +165,12 @@ export default function DoubtSolverPage({ user }) {
               </div>
               <div className="p-3 rounded-2xl bg-slate-900 border border-slate-800 text-xs text-indigo-300 flex items-center gap-2">
                 <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                <span>IBM BOB is processing your syllabus query...</span>
+                <span>IBM BOB is thinking...</span>
+                <span className="flex gap-0.5">
+                  <span className="w-1 h-1 rounded-full bg-indigo-400 animate-bounce" style={{animationDelay:'0ms'}}/>
+                  <span className="w-1 h-1 rounded-full bg-indigo-400 animate-bounce" style={{animationDelay:'150ms'}}/>
+                  <span className="w-1 h-1 rounded-full bg-indigo-400 animate-bounce" style={{animationDelay:'300ms'}}/>
+                </span>
               </div>
             </div>
           )}
@@ -165,17 +180,13 @@ export default function DoubtSolverPage({ user }) {
 
         {/* Suggestion Chips */}
         <div className="px-6 py-2.5 bg-slate-950/60 border-t border-slate-800/80 flex items-center gap-2 overflow-x-auto">
-          <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider flex-shrink-0">Suggestions:</span>
-          {[
-            'Explain Photosynthesis formula',
-            'What is Ohm Law V=IR?',
-            'Explain Newton Third Law',
-            'Difference between Series & Parallel'
-          ].map((chip, idx) => (
+          <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider flex-shrink-0">Quick Ask:</span>
+          {PRESET_QUESTIONS.map((chip, idx) => (
             <button
               key={idx}
               onClick={() => handlePresetQuestion(chip)}
-              className="px-3 py-1 rounded-full bg-slate-900 hover:bg-slate-800 border border-slate-800 text-[11px] font-medium text-slate-300 hover:text-white transition-colors flex-shrink-0"
+              disabled={botThinking}
+              className="px-3 py-1 rounded-full bg-slate-900 hover:bg-indigo-900/40 border border-slate-800 hover:border-indigo-500/40 text-[11px] font-medium text-slate-300 hover:text-white transition-all flex-shrink-0 disabled:opacity-40"
             >
               💡 {chip}
             </button>
@@ -189,15 +200,16 @@ export default function DoubtSolverPage({ user }) {
             value={inputText}
             onChange={(e) => setInputText(e.target.value)}
             placeholder="Type your question or doubt here..."
-            className="flex-1 px-4 py-3 rounded-xl bg-slate-950 border border-slate-800 text-white text-xs focus:outline-none focus:border-indigo-500 transition-colors"
+            disabled={botThinking}
+            className="flex-1 px-4 py-3 rounded-xl bg-slate-950 border border-slate-800 text-white text-xs focus:outline-none focus:border-indigo-500 transition-colors disabled:opacity-50"
           />
           <button
             type="submit"
             disabled={!inputText.trim() || botThinking}
             className="py-3 px-5 rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white text-xs font-bold shadow-lg shadow-indigo-600/30 flex items-center gap-2 transition-all disabled:opacity-50"
           >
-            <span>Ask</span>
-            <Send className="w-4 h-4" />
+            {botThinking ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+            <span>{botThinking ? 'Thinking...' : 'Ask'}</span>
           </button>
         </form>
 

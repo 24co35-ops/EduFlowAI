@@ -173,3 +173,90 @@ exports.getTeacherAnalytics = async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
+
+exports.solveDoubt = async (req, res) => {
+  try {
+    const { message, syllabusScope = '', history = [] } = req.body;
+    if (!message || !message.trim()) {
+      return res.status(400).json({ success: false, message: 'Question is required.' });
+    }
+
+    // Try Google Gemini if API key is available
+    const geminiKey = process.env.GEMINI_API_KEY;
+    if (geminiKey) {
+      try {
+        const axios = require('axios');
+        const geminiModel = process.env.GEMINI_MODEL || 'gemini-1.5-flash';
+        const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${geminiModel}:generateContent?key=${geminiKey}`;
+
+        const systemPrompt = `You are EduFlow AI Tutor - a friendly, expert educational assistant for school students.
+Syllabus Scope: ${syllabusScope || 'Class 10 Science & Technology'}
+
+Instructions:
+- Explain concepts clearly step-by-step
+- Use simple language appropriate for school students  
+- Include relevant formulas, examples, or diagrams described in text where useful
+- Keep answers focused and educational
+- Format using bullet points or numbered steps when helpful`;
+
+        const contents = [
+          { role: 'user', parts: [{ text: systemPrompt }] },
+          { role: 'model', parts: [{ text: 'Understood! I am ready to help students with their academic doubts. Please ask your question.' }] },
+          ...history.slice(-4).map(m => ({
+            role: m.sender === 'user' ? 'user' : 'model',
+            parts: [{ text: m.text }]
+          })),
+          { role: 'user', parts: [{ text: message }] }
+        ];
+
+        const geminiRes = await axios.post(geminiUrl, { contents }, {
+          headers: { 'Content-Type': 'application/json' },
+          timeout: 15000
+        });
+
+        const aiText = geminiRes.data?.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (aiText) {
+          return res.json({ success: true, reply: aiText.trim() });
+        }
+      } catch (geminiErr) {
+        console.warn('[Doubt Solver] Gemini API error, using fallback:', geminiErr.message);
+      }
+    }
+
+    // Try IBM BOB watsonx.ai fallback
+    try {
+      const bobReply = await bobService.solveDoubt(message, history, syllabusScope);
+      if (bobReply) {
+        return res.json({ success: true, reply: bobReply });
+      }
+    } catch (bobErr) {
+      console.warn('[Doubt Solver] IBM BOB error:', bobErr.message);
+    }
+
+    // Smart keyword-based local fallback
+    const q = message.toLowerCase();
+    let reply;
+
+    if (q.includes('photosynthesis') || q.includes('chlorophyll') || q.includes('plant energy')) {
+      reply = `🌱 **Photosynthesis Explained:**\n\n**Chemical Equation:**\n6CO₂ + 6H₂O + Light Energy → C₆H₁₂O₆ + 6O₂\n\n**Two Main Stages:**\n1. **Light-Dependent Reactions** (Thylakoid membrane):\n   - Absorbs sunlight via chlorophyll\n   - Produces ATP & NADPH\n   - Splits water molecules (photolysis)\n\n2. **Calvin Cycle / Dark Reactions** (Stroma):\n   - Uses ATP to fix CO₂ into glucose\n   - Doesn't directly need light\n\n**Key Point:** Chlorophyll absorbs red & blue light but reflects green (that's why plants look green!)`;
+    } else if (q.includes('ohm') || q.includes('v=ir') || q.includes('resistance') || q.includes('voltage')) {
+      reply = `⚡ **Ohm's Law Explained:**\n\n**Formula:** V = I × R\n- **V** = Voltage (Volts, V)\n- **I** = Current (Amperes, A)\n- **R** = Resistance (Ohms, Ω)\n\n**What it means:**\nThe voltage across a conductor is directly proportional to the current flowing through it, when temperature is constant.\n\n**Example:** If R = 10Ω and I = 2A:\nV = 2 × 10 = **20 Volts**\n\n**Memory Trick:** Think of water in a pipe:\n- Voltage = Water pressure\n- Current = Water flow rate\n- Resistance = Pipe narrowness`;
+    } else if (q.includes('newton') || q.includes('motion') || q.includes('inertia') || q.includes('force')) {
+      reply = `⚛️ **Newton's Laws of Motion:**\n\n**1st Law (Inertia):**\nAn object stays at rest or in uniform motion unless acted on by an external force.\n*Example: A ball rolling on a frictionless surface keeps moving forever.*\n\n**2nd Law (F = ma):**\nForce = Mass × Acceleration\n*Example: A 5kg object accelerating at 3 m/s² needs F = 5×3 = 15N*\n\n**3rd Law (Action-Reaction):**\nEvery action has an equal and opposite reaction.\n*Example: A rocket pushes exhaust gases down → gases push rocket up!*`;
+    } else if (q.includes('series') || q.includes('parallel') || q.includes('circuit')) {
+      reply = `🔌 **Series vs Parallel Circuits:**\n\n**Series Circuit:**\n- Components connected end-to-end in a single path\n- Same current flows through all\n- Total R = R₁ + R₂ + R₃\n- If one breaks → all stop working\n- *Example: Old Christmas lights*\n\n**Parallel Circuit:**\n- Components connected across same two points\n- Same voltage across all\n- 1/R_total = 1/R₁ + 1/R₂ + 1/R₃\n- If one breaks → others keep working\n- *Example: Home electrical wiring*`;
+    } else if (q.includes('acid') || q.includes('base') || q.includes('ph') || q.includes('alkali')) {
+      reply = `🧪 **Acids & Bases:**\n\n**Acids:**\n- pH < 7\n- Taste sour (like lemon juice)\n- Turn blue litmus **red**\n- Examples: HCl, H₂SO₄, vinegar (CH₃COOH)\n\n**Bases (Alkalis):**\n- pH > 7\n- Taste bitter, feel slippery\n- Turn red litmus **blue**\n- Examples: NaOH, Ca(OH)₂, baking soda\n\n**Neutral:** pH = 7 (pure water)\n\n**Neutralization Reaction:**\nAcid + Base → Salt + Water\n*HCl + NaOH → NaCl + H₂O*`;
+    } else {
+      reply = `🤖 **EduFlow AI Tutor Response:**\n\nGreat question about: *"${message}"*\n\nHere's how to approach this:\n\n1. **Break it down:** Identify the key terms and concepts involved\n2. **Core Principle:** Connect this to the fundamental rule or formula in your syllabus\n3. **Example:** Think of a real-world scenario where this applies\n4. **Practice:** Try solving 2-3 related problems to reinforce understanding\n\n💡 **Tip:** For a more detailed explanation, try asking with more specific keywords, e.g.:\n- *"Explain the formula for ${message}"*\n- *"Give me an example of ${message}"*\n- *"What is the difference between X and Y in ${message}"*`;
+    }
+
+    return res.json({ success: true, reply });
+  } catch (error) {
+    console.error('[Doubt Solver] Error:', error.message);
+    return res.json({
+      success: true,
+      reply: `🤖 I encountered a small hiccup processing your question about "${req.body?.message}". Please try rephrasing or ask a different question!`
+    });
+  }
+};

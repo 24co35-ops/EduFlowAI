@@ -7,5 +7,6 @@ router.post('/flashcards/generate', protect, studentController.generateFlashcard
 router.get('/flashcards', protect, studentController.getFlashcards);
 router.get('/progress', protect, studentController.getStudentProgress);
 router.get('/analytics', protect, studentController.getTeacherAnalytics);
+router.post('/doubt', protect, studentController.solveDoubt);
 
 module.exports = router;
