@@ -1,13 +1,11 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Sparkles, User, Lock, Mail, Building, ArrowRight, ShieldCheck } from 'lucide-react';
+import { Sparkles, User, Lock, Mail, Building, ArrowRight } from 'lucide-react';
 import { loginUser, registerUser } from '../services/api';
 
 export function LoginPage({ setUser }) {
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [role, setRole] = useState('teacher');
+  const [email, setEmail] = useState('teacher@eduflow.ai');
+  const [password, setPassword] = useState('teacher123');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const navigate = useNavigate();
@@ -17,45 +15,27 @@ export function LoginPage({ setUser }) {
     setLoading(true);
     setError('');
     try {
-      let userData;
-      try {
-        const res = await loginUser({ email, password });
-        if (res.data.success) {
-          userData = res.data.user;
-          if (name.trim()) userData.name = name.trim();
-        }
-      } catch (err) {
-        // Fallback for offline local login
-        userData = {
-          id: 'user-' + Date.now(),
-          name: name.trim() || (role === 'teacher' ? 'Prof. Alex Morgan' : 'Sam Wilson'),
-          email: email || (role === 'teacher' ? 'teacher@eduflow.ai' : 'student@eduflow.ai'),
-          role: role,
-          institution: 'EduFlow Academy',
-          grade: 'Class 10'
-        };
+      const res = await loginUser({ email, password });
+      if (res.data.success) {
+        localStorage.setItem('eduflow_token', res.data.token);
+        localStorage.setItem('eduflow_user', JSON.stringify(res.data.user));
+        setUser(res.data.user);
+        navigate('/');
+      } else {
+        setError(res.data.message || 'Login failed. Invalid credentials.');
       }
-
-      const token = 'demo_jwt_token_' + Date.now();
-      localStorage.setItem('eduflow_token', token);
-      localStorage.setItem('eduflow_user', JSON.stringify(userData));
-      setUser(userData);
-      navigate('/');
     } catch (err) {
-      setError('Login failed. Please try again.');
+      setError(err.response?.data?.message || 'Login failed. Check your email and password.');
     } finally {
       setLoading(false);
     }
   };
 
-  const setDemoRole = (selectedRole) => {
-    setRole(selectedRole);
-    if (selectedRole === 'teacher') {
-      setName('Prof. Alex Morgan');
+  const setDemoRole = (role) => {
+    if (role === 'teacher') {
       setEmail('teacher@eduflow.ai');
       setPassword('teacher123');
     } else {
-      setName('Sam Wilson');
       setEmail('student@eduflow.ai');
       setPassword('student123');
     }
@@ -71,12 +51,12 @@ export function LoginPage({ setUser }) {
             <Sparkles className="w-6 h-6 text-indigo-400" />
           </div>
           <h2 className="text-2xl font-bold text-white font-outfit">Welcome to EduFlow <span className="gradient-text">AI</span></h2>
-          <p className="text-xs text-slate-400">Powered by IBM watsonx.ai Granite Models</p>
+          <p className="text-xs text-slate-400">Powered by IBM watsonx.ai & Google Gemini</p>
         </div>
 
         {/* Demo Quick-Select Buttons */}
         <div className="p-3 rounded-2xl bg-slate-900/90 border border-slate-800 space-y-2">
-          <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider text-center">Quick Demo Preset</p>
+          <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider text-center">Quick Demo Accounts</p>
           <div className="grid grid-cols-2 gap-2">
             <button
               type="button"
@@ -111,21 +91,6 @@ export function LoginPage({ setUser }) {
 
         <form onSubmit={handleLogin} className="space-y-4">
           <div>
-            <label className="block text-xs font-medium text-slate-300 mb-1">Your Full Name</label>
-            <div className="relative">
-              <User className="w-4 h-4 text-slate-500 absolute left-3 top-3" />
-              <input
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                required
-                className="w-full pl-9 pr-4 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-white text-xs focus:outline-none focus:border-indigo-500 transition-colors"
-                placeholder="Enter your name (e.g. Dr. John Smith)"
-              />
-            </div>
-          </div>
-
-          <div>
             <label className="block text-xs font-medium text-slate-300 mb-1">Email Address</label>
             <div className="relative">
               <Mail className="w-4 h-4 text-slate-500 absolute left-3 top-3" />
@@ -135,7 +100,7 @@ export function LoginPage({ setUser }) {
                 onChange={(e) => setEmail(e.target.value)}
                 required
                 className="w-full pl-9 pr-4 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-white text-xs focus:outline-none focus:border-indigo-500 transition-colors"
-                placeholder="name@school.edu"
+                placeholder="teacher@eduflow.ai"
               />
             </div>
           </div>
@@ -188,13 +153,17 @@ export function RegisterPage({ setUser }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [role, setRole] = useState('teacher');
-  const [institution, setInstitution] = useState('Delhi Public School');
+  const [institution, setInstitution] = useState('EduFlow Academy');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const navigate = useNavigate();
 
   const handleRegister = async (e) => {
     e.preventDefault();
+    if (password.length < 6) {
+      setError('Password must be at least 6 characters long.');
+      return;
+    }
     setLoading(true);
     setError('');
     try {
@@ -287,7 +256,7 @@ export function RegisterPage({ setUser }) {
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-slate-300 mb-1">Password</label>
+            <label className="block text-xs font-medium text-slate-300 mb-1">Password (min 6 chars)</label>
             <div className="relative">
               <Lock className="w-4 h-4 text-slate-500 absolute left-3 top-3" />
               <input
@@ -295,6 +264,7 @@ export function RegisterPage({ setUser }) {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
+                minLength={6}
                 className="w-full pl-9 pr-4 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-white text-xs focus:outline-none focus:border-indigo-500"
                 placeholder="••••••••"
               />
@@ -310,7 +280,7 @@ export function RegisterPage({ setUser }) {
                 value={institution}
                 onChange={(e) => setInstitution(e.target.value)}
                 className="w-full pl-9 pr-4 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-white text-xs focus:outline-none focus:border-indigo-500"
-                placeholder="Delhi Public School"
+                placeholder="EduFlow Academy"
               />
             </div>
           </div>

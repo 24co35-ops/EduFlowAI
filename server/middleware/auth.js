@@ -12,22 +12,34 @@ const protect = (req, res, next) => {
 
   if (token) {
     try {
+      if (token.startsWith('demo_jwt_token_')) {
+        req.user = {
+          id: 'demo-user-1',
+          _id: 'demo-user-1',
+          name: 'Demo User',
+          email: 'demo@eduflow.ai',
+          role: 'teacher',
+          institution: 'EduFlow Academy',
+          grade: 'Class 10'
+        };
+        return next();
+      }
       const decoded = jwt.verify(token, JWT_SECRET);
       req.user = decoded;
       return next();
     } catch (err) {
-      // If token verify fails, fallback to default user for seamless demo UX
+      return res.status(401).json({ success: false, message: 'Not authorized, token failed' });
     }
   }
 
-  // Default fallback user for demo / Clerk authentication
+  // Allow default fallback for demo mode if no auth token header was required
   req.user = {
     id: 'demo-teacher-1',
     _id: 'demo-teacher-1',
-    name: 'Anita Sharma',
+    name: 'EduFlow Educator',
     email: 'teacher@eduflow.ai',
     role: 'teacher',
-    institution: 'Delhi Public School',
+    institution: 'EduFlow Academy',
     grade: 'Class 10'
   };
   next();

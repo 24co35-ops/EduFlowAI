@@ -13,6 +13,8 @@ class BobService {
     this.apiUrl = process.env.WATSONX_URL || 'https://us-south.ml.cloud.ibm.com';
     this.apiKey = process.env.IBM_API_KEY || '';
     this.projectId = process.env.WATSONX_PROJECT_ID || '';
+    this.cachedToken = null;
+    this.tokenExpiresAt = 0;
   }
 
   isConfigured() {
@@ -20,7 +22,30 @@ class BobService {
   }
 
   /**
-   * Helper to call IBM watsonx.ai generation endpoint using standard IAM token exchange + REST payload
+   * Helper to fetch or reuse cached IBM IAM OAuth token (valid 60 mins)
+   */
+  async getAccessToken() {
+    if (this.cachedToken && Date.now() < this.tokenExpiresAt) {
+      return this.cachedToken;
+    }
+
+    const tokenRes = await axios.post(
+      'https://iam.cloud.ibm.com/identity/token',
+      new URLSearchParams({
+        grant_type: 'urn:ibm:params:oauth:grant-type:apikey',
+        apikey: this.apiKey
+      }),
+      { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }
+    );
+
+    this.cachedToken = tokenRes.data.access_token;
+    // Cache for 50 minutes (3000 seconds)
+    this.tokenExpiresAt = Date.now() + 3000 * 1000;
+    return this.cachedToken;
+  }
+
+  /**
+   * Helper to call IBM watsonx.ai generation endpoint using cached token
    */
   async generateText({ modelId, prompt, parameters = {} }) {
     if (!this.isConfigured()) {
@@ -28,29 +53,24 @@ class BobService {
     }
 
     try {
-      // Get IAM Token
-      const tokenRes = await axios.post(
-        'https://iam.cloud.ibm.com/identity/token',
-        new URLSearchParams({
-          grant_type: 'urn:ibm:params:oauth:grant-type:apikey',
-          apikey: this.apiKey
-        }),
-        { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }
-      );
-      const accessToken = tokenRes.data.access_token;
-
-      // Call watsonx.ai text generation API
+      const accessToken = await this.getAccessToken();
       const endpoint = `${this.apiUrl}/ml/v1/text/generation?version=2024-05-31`;
+
+      const decodingMethod = parameters.decoding_method || (parameters.temperature ? 'sample' : 'greedy');
+      const reqParameters = {
+        max_new_tokens: parameters.max_new_tokens || 900,
+        decoding_method: decodingMethod
+      };
+      if (decodingMethod === 'sample' && parameters.temperature) {
+        reqParameters.temperature = parameters.temperature;
+      }
+
       const response = await axios.post(
         endpoint,
         {
           model_id: modelId || 'ibm/granite-13b-instruct-v2',
           input: prompt,
-          parameters: {
-            max_new_tokens: parameters.max_new_tokens || 900,
-            temperature: parameters.temperature || 0.7,
-            decoding_method: 'greedy'
-          },
+          parameters: reqParameters,
           project_id: this.projectId
         },
         {
@@ -239,12 +259,16 @@ Respond ONLY in valid JSON array format containing objects with keys:
    * F4: Student Doubt Solver (Chat Response)
    */
   async solveDoubt(userQuestion, chatHistory = [], syllabusScope = '') {
+    const historyText = Array.isArray(chatHistory) && chatHistory.length > 0
+      ? `Previous Conversation History:\n${chatHistory.slice(-4).map(m => `${m.sender === 'user' ? 'Student' : 'Tutor'}: ${m.text}`).join('\n')}\n\n`
+      : '';
+
     const contextPrompt = `System: You are EduFlow AI's friendly, encouraging tutor powered by IBM BOB (watsonx.ai Granite 13B Chat).
 Your role is to help students understand concepts clearly, step-by-step.
 Keep answers clear, concise, curriculum-aligned, and easy to understand.
 ${syllabusScope ? `Syllabus Scope Context: ${syllabusScope}` : ''}
 
-User Question: ${userQuestion}`;
+${historyText}Student Question: ${userQuestion}`;
 
     const result = await this.generateText({
       modelId: 'ibm/granite-13b-chat-v2',
@@ -285,7 +309,7 @@ User Question: ${userQuestion}`;
    */
   async generateFlashcards(chapterText, title = 'Study Deck') {
     const prompt = `System: You are IBM watsonx.ai Granite. 
-Summarize the chapter text and generate 5 flashcards.
+Summarize the chapter text below and generate 5 flashcards based on its contents.
 Respond ONLY in valid JSON:
 {
   "title": "${title}",
@@ -293,7 +317,10 @@ Respond ONLY in valid JSON:
   "cards": [
     { "front": "Question/Term", "back": "Answer/Definition" }
   ]
-}`;
+}
+
+Chapter Text:
+${chapterText ? chapterText.slice(0, 2500) : ''}`;
 
     const result = await this.generateText({
       modelId: 'ibm/granite-13b-instruct-v2',
@@ -343,13 +370,17 @@ Respond ONLY in valid JSON:
    */
   async autoGradeAnswer(question, expectedAnswer, studentAnswer) {
     const prompt = `System: You are IBM watsonx.ai Granite NLP grader.
-Grade the student's answer out of 5 based on the question and expected answer.
+Grade the student's answer out of 5 based on the question and expected answer provided below.
 Respond ONLY in valid JSON:
 {
   "score": 4,
   "maxScore": 5,
   "feedback": "One line constructive feedback."
-}`;
+}
+
+Question: ${question || 'General Question'}
+Expected Answer: ${expectedAnswer || 'Expected answer'}
+Student Answer: ${studentAnswer || 'Student response'}`;
 
     const result = await this.generateText({
       modelId: 'ibm/granite-13b-instruct-v2',
