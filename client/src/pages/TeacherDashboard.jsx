@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useUser } from '@clerk/clerk-react';
 import { 
   Sparkles, 
   BookOpen, 
@@ -16,6 +17,8 @@ import {
 import { getLessons, getQuizzes, getTeacherAnalytics } from '../services/api';
 
 export default function TeacherDashboard({ user }) {
+  const { user: clerkUser } = useUser();
+  const displayName = clerkUser?.fullName || clerkUser?.firstName || user?.name || 'Educator';
   const [lessons, setLessons] = useState([]);
   const [quizzes, setQuizzes] = useState([]);
   const [analytics, setAnalytics] = useState(null);
@@ -52,7 +55,7 @@ export default function TeacherDashboard({ user }) {
               <Sparkles className="w-3.5 h-3.5" /> Educator Control Center
             </div>
             <h1 className="text-3xl font-extrabold text-white font-outfit">
-              Hello, <span className="gradient-text">{user?.name || 'Teacher'}</span> 👋
+              Hello, <span className="gradient-text">{displayName}</span> 👋
             </h1>
             <p className="text-xs text-slate-300 max-w-xl">
               IBM BOB (watsonx.ai) is ready to transform your course syllabus into weekly lesson plans, quizzes, and multilingual materials in seconds.

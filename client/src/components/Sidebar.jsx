@@ -1,5 +1,6 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
+import { useUser } from '@clerk/clerk-react';
 import { 
   LayoutDashboard, 
   BookOpen, 
@@ -14,7 +15,9 @@ import {
 } from 'lucide-react';
 
 export default function Sidebar({ user }) {
+  const { user: clerkUser } = useUser();
   const isTeacher = user?.role === 'teacher';
+  const displayName = clerkUser?.fullName || clerkUser?.firstName || user?.name || 'Educator';
 
   const teacherNav = [
     { name: 'Dashboard', path: '/', icon: LayoutDashboard },
@@ -43,8 +46,8 @@ export default function Sidebar({ user }) {
             <GraduationCap className="w-5 h-5 text-indigo-400" />
           </div>
           <div className="overflow-hidden">
-            <h4 className="text-xs font-bold text-white truncate">{user?.name || 'EduFlow User'}</h4>
-            <p className="text-[11px] text-slate-400 capitalize">{user?.role || 'Guest'} • {user?.grade || 'Class 10'}</p>
+            <h4 className="text-xs font-bold text-white truncate">{displayName}</h4>
+            <p className="text-[11px] text-slate-400 capitalize">{user?.role || 'Teacher'} • {user?.grade || 'Class 10'}</p>
           </div>
         </div>
 

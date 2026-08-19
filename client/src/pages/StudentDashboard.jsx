@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useUser } from '@clerk/clerk-react';
 import { 
   Sparkles, 
   Flame, 
@@ -14,6 +15,8 @@ import {
 import { getStudentProgress, getQuizzes } from '../services/api';
 
 export default function StudentDashboard({ user }) {
+  const { user: clerkUser } = useUser();
+  const displayName = clerkUser?.fullName || clerkUser?.firstName || user?.name || 'Student';
   const [progress, setProgress] = useState(null);
   const [quizzes, setQuizzes] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -47,7 +50,7 @@ export default function StudentDashboard({ user }) {
               <Sparkles className="w-3.5 h-3.5 text-emerald-400" /> Student Learning Portal
             </div>
             <h1 className="text-3xl font-extrabold text-white font-outfit">
-              Welcome back, <span className="gradient-text">{user?.name || 'Rohan'}</span> 🚀
+              Welcome back, <span className="gradient-text">{displayName}</span> 🚀
             </h1>
             <p className="text-xs text-slate-300 max-w-xl">
               Ask doubts anytime to IBM BOB, generate instant flashcard decks from your textbook chapters, and take adaptive quizzes tailored to your weak topics.
