@@ -12,22 +12,25 @@ dotenv.config();
 
 const app = express();
 
-// Security headers
-app.use(helmet());
+// Security headers (disable CSP — this is an API server, not a page server)
+app.use(helmet({ contentSecurityPolicy: false }));
 
-// ponytail: restrict CORS to configured frontend or dev origins instead of open '*'
+// ponytail: same-origin by default on Vercel (frontend + API on same host);
+// only enforce allowlist when CLIENT_URL explicitly differs (e.g. separate frontend domain)
 const allowedOrigins = process.env.CLIENT_URL
   ? process.env.CLIENT_URL.split(',').map((s) => s.trim())
-  : ['http://localhost:5173', 'http://localhost:3000'];
+  : null; // null = allow all origins (safe when frontend is same-origin)
 
 app.use(
   cors({
     origin: (origin, callback) => {
-      if (!origin || allowedOrigins.includes(origin) || process.env.NODE_ENV !== 'production') {
-        callback(null, true);
-      } else {
-        callback(new Error('Blocked by CORS policy'));
-      }
+      // No origin = server-to-server or same-origin request — always allow
+      if (!origin) return callback(null, true);
+      // If no allowlist configured, allow all (Vercel same-origin deployment)
+      if (!allowedOrigins) return callback(null, true);
+      // Otherwise enforce the allowlist
+      if (allowedOrigins.includes(origin)) return callback(null, true);
+      callback(new Error('Blocked by CORS policy'));
     },
     credentials: true
   })
@@ -43,7 +46,8 @@ app.use(mongoSanitize());
 connectDB();
 
 // API Routes
-// ponytail: rate-limit auth endpoints to block brute-force attacks
+// ponytail: rate-limit auth endpoints — trust Vercel/proxy forwarded IPs
+app.set('trust proxy', 1);
 const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 20, standardHeaders: true, legacyHeaders: false });
 app.use(['/api/auth', '/auth'], authLimiter, require('./routes/auth.routes'));
 app.use(['/api/lessons', '/lessons'], require('./routes/lesson.routes'));
