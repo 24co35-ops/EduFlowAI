@@ -8,6 +8,34 @@
 
 const axios = require('axios');
 
+// ponytail: robust JSON extractor that handles preamble, markdown fences, and trailing notes
+function safeExtractJson(text) {
+  if (!text || typeof text !== 'string') return null;
+  const stripped = text.replace(/```(?:json)?/gi, '').replace(/```/g, '').trim();
+  try {
+    return JSON.parse(stripped);
+  } catch (e) {
+    const firstBrace = stripped.indexOf('{');
+    const lastBrace = stripped.lastIndexOf('}');
+    const firstBracket = stripped.indexOf('[');
+    const lastBracket = stripped.lastIndexOf(']');
+
+    const hasObject = firstBrace !== -1 && lastBrace > firstBrace;
+    const hasArray = firstBracket !== -1 && lastBracket > firstBracket;
+
+    if (hasObject && (!hasArray || firstBrace < firstBracket)) {
+      try {
+        return JSON.parse(stripped.slice(firstBrace, lastBrace + 1));
+      } catch (innerErr) {}
+    } else if (hasArray) {
+      try {
+        return JSON.parse(stripped.slice(firstBracket, lastBracket + 1));
+      } catch (innerErr) {}
+    }
+    return null;
+  }
+}
+
 class BobService {
   constructor() {
     this.apiUrl = process.env.WATSONX_URL || 'https://us-south.ml.cloud.ibm.com';
@@ -119,12 +147,9 @@ ${syllabusText.slice(0, 2500)}`;
     });
 
     if (result) {
-      try {
-        const parsed = JSON.parse(result.replace(/```json|```/g, '').trim());
-        return parsed;
-      } catch (e) {
-        console.warn('[BOB Service] Parsing JSON failed, falling back to mock generator');
-      }
+      const parsed = safeExtractJson(result);
+      if (parsed) return parsed;
+      console.warn('[BOB Service] Parsing JSON failed, falling back to mock generator');
     }
 
     // Dynamic Mock Fallback tailored to syllabus content
@@ -200,12 +225,9 @@ Respond ONLY in valid JSON array format containing objects with keys:
     });
 
     if (result) {
-      try {
-        const parsed = JSON.parse(result.replace(/```json|```/g, '').trim());
-        return parsed;
-      } catch (e) {
-        console.warn('[BOB Service] Quiz JSON parse failed, returning robust default mock');
-      }
+      const parsed = safeExtractJson(result);
+      if (parsed) return parsed;
+      console.warn('[BOB Service] Quiz JSON parse failed, returning robust default mock');
     }
 
     // Default mock quiz items tailored to topic
@@ -329,12 +351,9 @@ ${chapterText ? chapterText.slice(0, 2500) : ''}`;
     });
 
     if (result) {
-      try {
-        const parsed = JSON.parse(result.replace(/```json|```/g, '').trim());
-        return parsed;
-      } catch (e) {
-        console.warn('[BOB Service] Flashcard JSON parse failed, returning fallback');
-      }
+      const parsed = safeExtractJson(result);
+      if (parsed) return parsed;
+      console.warn('[BOB Service] Flashcard JSON parse failed, returning fallback');
     }
 
     return {
@@ -389,11 +408,9 @@ Student Answer: ${studentAnswer || 'Student response'}`;
     });
 
     if (result) {
-      try {
-        return JSON.parse(result.replace(/```json|```/g, '').trim());
-      } catch (e) {
-        console.warn('[BOB Service] Auto-grading JSON parse failed, using intelligent similarity heuristic');
-      }
+      const parsed = safeExtractJson(result);
+      if (parsed) return parsed;
+      console.warn('[BOB Service] Auto-grading JSON parse failed, using intelligent similarity heuristic');
     }
 
     // Similarity heuristic fallback

@@ -2,6 +2,7 @@ const Flashcard = require('../models/Flashcard');
 const Attempt = require('../models/Attempt');
 const bobService = require('../services/bob.service');
 const { getIsConnected } = require('../config/db');
+const { memoryAttempts } = require('./quizController');
 
 // Memory store fallback
 const memoryFlashcards = [
@@ -58,8 +59,9 @@ exports.generateFlashcards = async (req, res) => {
       };
     }
 
+    const userId = req.user.id || req.user._id;
     const flashcardData = {
-      studentId: req.user ? (req.user.id || req.user._id) : 'demo-student-1',
+      studentId: userId,
       title: bobDeck.title || title,
       summary: bobDeck.summary || '',
       cards: bobDeck.cards || []
@@ -79,10 +81,10 @@ exports.generateFlashcards = async (req, res) => {
     return res.status(201).json({ success: true, deck: memDeck });
   } catch (error) {
     console.error('[Flashcards] Unexpected error:', error.message);
-    // Last resort: return a hardcoded demo deck instead of 500
+    const userId = req.user ? (req.user.id || req.user._id) : 'student';
     const emergencyDeck = {
       _id: 'deck-emergency-' + Date.now(),
-      studentId: 'demo-student-1',
+      studentId: userId,
       title: req.body?.title || 'Study Deck',
       summary: '• Key concepts from the chapter.\n• Review terms and definitions.\n• Apply to practice questions.',
       cards: [
@@ -98,11 +100,14 @@ exports.generateFlashcards = async (req, res) => {
 
 exports.getFlashcards = async (req, res) => {
   try {
+    // ponytail: isolate flashcards to the authenticated student
+    const userId = req.user.id || req.user._id;
     if (getIsConnected()) {
-      const decks = await Flashcard.find().sort({ createdAt: -1 });
+      const decks = await Flashcard.find({ studentId: userId }).sort({ createdAt: -1 });
       return res.json({ success: true, decks });
     }
-    return res.json({ success: true, decks: memoryFlashcards });
+    const decks = memoryFlashcards.filter(d => String(d.studentId) === String(userId));
+    return res.json({ success: true, decks });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
@@ -110,37 +115,32 @@ exports.getFlashcards = async (req, res) => {
 
 exports.getStudentProgress = async (req, res) => {
   try {
-    const studentId = req.user ? (req.user.id || req.user._id) : 'demo-student-1';
+    const studentId = req.user.id || req.user._id;
     let attempts = [];
 
     if (getIsConnected()) {
       attempts = await Attempt.find({ studentId }).sort({ createdAt: -1 });
+    } else {
+      // Memory store fallback
+      attempts = memoryAttempts.filter(a => String(a.studentId) === String(studentId));
     }
 
-    if (attempts.length === 0) {
-      // Default demo stats
-      attempts = [
-        { topic: 'Photosynthesis & Plant Energy', percentage: 90, createdAt: new Date(Date.now() - 86400000 * 3) },
-        { topic: 'Ohm Law & Electric Circuits', percentage: 85, createdAt: new Date(Date.now() - 86400000 * 2) },
-        { topic: 'Chemical Reactions & Equations', percentage: 70, createdAt: new Date(Date.now() - 86400000 * 1) }
-      ];
-    }
+    const totalQuizzesTaken = attempts.length;
+    const averageScore = totalQuizzesTaken > 0
+      ? Math.round(attempts.reduce((acc, curr) => acc + (curr.percentage || 0), 0) / totalQuizzesTaken)
+      : 0;
 
-    const averageScore = Math.round(
-      attempts.reduce((acc, curr) => acc + (curr.percentage || 0), 0) / attempts.length
+    const weakTopics = Array.from(
+      new Set(attempts.filter(a => (a.percentage || 0) < 80).map(a => a.topic))
     );
-
-    const weakTopics = attempts
-      .filter(a => (a.percentage || 0) < 80)
-      .map(a => a.topic);
 
     return res.json({
       success: true,
       summary: {
-        totalQuizzesTaken: attempts.length,
+        totalQuizzesTaken,
         averageScore,
-        currentStreakDays: 5,
-        weakTopics: weakTopics.length > 0 ? Array.from(new Set(weakTopics)) : ['Chemical Reactions Balancing'],
+        currentStreakDays: totalQuizzesTaken > 0 ? Math.min(totalQuizzesTaken, 7) : 0,
+        weakTopics,
         recentAttempts: attempts
       }
     });
@@ -151,28 +151,64 @@ exports.getStudentProgress = async (req, res) => {
 
 exports.getTeacherAnalytics = async (req, res) => {
   try {
+    let attempts = [];
+    if (getIsConnected()) {
+      attempts = await Attempt.find();
+    } else {
+      attempts = memoryAttempts;
+    }
+
+    const totalStudents = new Set(attempts.map(a => a.studentId)).size;
+    const quizzesCompleted = attempts.length;
+    const classAverageScore = quizzesCompleted > 0
+      ? Math.round(attempts.reduce((acc, curr) => acc + (curr.percentage || 0), 0) / quizzesCompleted)
+      : 84.5;
+
+    // Aggregate topic performance dynamically
+    const topicMap = {};
+    attempts.forEach(a => {
+      const topicName = a.topic || 'General';
+      if (!topicMap[topicName]) topicMap[topicName] = { total: 0, count: 0 };
+      topicMap[topicName].total += a.percentage || 0;
+      topicMap[topicName].count += 1;
+    });
+
+    const topicPerformance = Object.keys(topicMap).map(topic => {
+      const avg = Math.round(topicMap[topic].total / topicMap[topic].count);
+      return {
+        topic,
+        avgScore: avg,
+        difficulty: avg >= 80 ? 'Easy' : avg >= 70 ? 'Medium' : 'Hard'
+      };
+    });
+
+    const weakTopicAlerts = topicPerformance
+      .filter(t => t.avgScore < 75)
+      .map(t => ({
+        topic: t.topic,
+        failureRate: `${100 - t.avgScore}%`,
+        recommendation: 'IBM BOB recommended a 15-minute diagnostic recap session.'
+      }));
+
     return res.json({
       success: true,
       analytics: {
-        totalStudents: 42,
-        quizzesCompleted: 128,
-        classAverageScore: 84.5,
-        timeSavedHoursThisWeek: 14.2,
-        topicPerformance: [
+        totalStudents: Math.max(totalStudents, 1),
+        quizzesCompleted,
+        classAverageScore,
+        timeSavedHoursThisWeek: Number((quizzesCompleted * 0.35 + 2).toFixed(1)),
+        topicPerformance: topicPerformance.length > 0 ? topicPerformance : [
           { topic: 'Electric Current & Ohm Law', avgScore: 88, difficulty: 'Easy' },
-          { topic: 'Photosynthesis & Calvin Cycle', avgScore: 82, difficulty: 'Medium' },
-          { topic: 'Chemical Balancing & Stoichiometry', avgScore: 68, difficulty: 'Hard' },
-          { topic: 'Magnetic Effects of Current', avgScore: 74, difficulty: 'Hard' }
+          { topic: 'Photosynthesis & Calvin Cycle', avgScore: 82, difficulty: 'Medium' }
         ],
-        weakTopicAlerts: [
-          { topic: 'Chemical Balancing & Stoichiometry', failureRate: '32%', recommendation: 'IBM BOB recommended a 15-minute diagnostic recap session.' }
-        ]
+        weakTopicAlerts
       }
     });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
 };
+
 
 exports.solveDoubt = async (req, res) => {
   try {

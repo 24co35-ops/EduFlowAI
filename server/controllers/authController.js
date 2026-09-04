@@ -4,13 +4,16 @@ const User = require('../models/User');
 const { getIsConnected } = require('../config/db');
 const { JWT_SECRET } = require('../middleware/auth');
 
+// ponytail: email regex standard validation
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 // Memory store fallback for demo mode
 const memoryUsers = [
   {
     _id: 'demo-teacher-1',
     name: 'Anita Sharma',
     email: 'teacher@eduflow.ai',
-    passwordHash: bcrypt.hashSync('teacher123', 8),
+    passwordHash: bcrypt.hashSync('teacher123', 10),
     role: 'teacher',
     institution: 'Delhi Public School',
     grade: 'Class 10'
@@ -19,7 +22,7 @@ const memoryUsers = [
     _id: 'demo-student-1',
     name: 'Rohan Gupta',
     email: 'student@eduflow.ai',
-    passwordHash: bcrypt.hashSync('student123', 8),
+    passwordHash: bcrypt.hashSync('student123', 10),
     role: 'student',
     institution: 'Delhi Public School',
     grade: 'Class 10'
@@ -40,24 +43,26 @@ exports.register = async (req, res) => {
     if (!name || !email || !password) {
       return res.status(400).json({ success: false, message: 'Name, email, and password are required' });
     }
-    if (password.length < 6) {
-      return res.status(400).json({ success: false, message: 'Password must be at least 6 characters long' });
+    const cleanEmail = String(email).trim().toLowerCase();
+    if (!EMAIL_REGEX.test(cleanEmail)) {
+      return res.status(400).json({ success: false, message: 'Invalid email address format' });
+    }
+    if (password.length < 8) {
+      return res.status(400).json({ success: false, message: 'Password must be at least 8 characters long' });
     }
 
     const assignedRole = role === 'student' ? 'student' : 'teacher';
+    const passwordHash = await bcrypt.hash(password, 10);
 
     if (getIsConnected()) {
-      const existing = await User.findOne({ email: email.toLowerCase() });
+      const existing = await User.findOne({ email: cleanEmail });
       if (existing) {
         return res.status(400).json({ success: false, message: 'User with this email already exists' });
       }
 
-      const salt = await bcrypt.genSalt(10);
-      const passwordHash = await bcrypt.hash(password, salt);
-
       const newUser = await User.create({
-        name,
-        email: email.toLowerCase(),
+        name: name.trim(),
+        email: cleanEmail,
         passwordHash,
         role: assignedRole,
         institution: institution || 'EduFlow Academy',
@@ -79,17 +84,17 @@ exports.register = async (req, res) => {
       });
     }
 
-    // In-memory fallback
-    const existingMem = memoryUsers.find(u => u.email.toLowerCase() === email.toLowerCase());
+    // In-memory fallback (only when MongoDB is not connected)
+    const existingMem = memoryUsers.find(u => u.email.toLowerCase() === cleanEmail);
     if (existingMem) {
       return res.status(400).json({ success: false, message: 'User already exists in demo storage' });
     }
 
     const newMemUser = {
       _id: 'user-' + Date.now(),
-      name,
-      email: email.toLowerCase(),
-      passwordHash: bcrypt.hashSync(password, 8),
+      name: name.trim(),
+      email: cleanEmail,
+      passwordHash,
       role: assignedRole,
       institution: institution || 'EduFlow Academy',
       grade: grade || 'Class 10'
@@ -121,20 +126,21 @@ exports.login = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Email and password are required' });
     }
 
+    const cleanEmail = String(email).trim().toLowerCase();
     let foundUser = null;
-    if (getIsConnected()) {
-      foundUser = await User.findOne({ email: email.toLowerCase() });
-    }
 
-    if (!foundUser) {
-      foundUser = memoryUsers.find(u => u.email.toLowerCase() === email.toLowerCase());
+    if (getIsConnected()) {
+      foundUser = await User.findOne({ email: cleanEmail });
+    } else {
+      // In-memory lookup only in offline/demo mode
+      foundUser = memoryUsers.find(u => u.email.toLowerCase() === cleanEmail);
     }
 
     if (!foundUser) {
       return res.status(401).json({ success: false, message: 'Invalid credentials' });
     }
 
-    const isMatch = bcrypt.compareSync(password, foundUser.passwordHash);
+    const isMatch = await bcrypt.compare(password, foundUser.passwordHash);
     if (!isMatch) {
       return res.status(401).json({ success: false, message: 'Invalid credentials' });
     }
@@ -163,3 +169,4 @@ exports.getMe = async (req, res) => {
     user: req.user
   });
 };
+

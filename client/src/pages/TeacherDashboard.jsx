@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { useUser } from '@clerk/clerk-react';
 import { 
   Sparkles, 
   BookOpen, 
@@ -17,8 +16,7 @@ import {
 import { getLessons, getQuizzes, getTeacherAnalytics } from '../services/api';
 
 export default function TeacherDashboard({ user }) {
-  const { user: clerkUser } = useUser();
-  const displayName = clerkUser?.fullName || clerkUser?.firstName || user?.name || 'Educator';
+  const displayName = user?.name || 'Educator';
   const [lessons, setLessons] = useState([]);
   const [quizzes, setQuizzes] = useState([]);
   const [analytics, setAnalytics] = useState(null);

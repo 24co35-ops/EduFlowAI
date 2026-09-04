@@ -12,6 +12,21 @@ API.interceptors.request.use((config) => {
   return config;
 });
 
+// ponytail: automatic 401 handling to clear stale token and redirect to login
+API.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response && error.response.status === 401) {
+      localStorage.removeItem('eduflow_token');
+      localStorage.removeItem('eduflow_user');
+      if (window.location.pathname !== '/login' && window.location.pathname !== '/register') {
+        window.location.href = '/login';
+      }
+    }
+    return Promise.reject(error);
+  }
+);
+
 // Auth API
 export const loginUser = (data) => API.post('/auth/login', data);
 export const registerUser = (data) => API.post('/auth/register', data);

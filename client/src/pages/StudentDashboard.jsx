@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { useUser } from '@clerk/clerk-react';
 import { 
   Sparkles, 
   Flame, 
@@ -8,15 +7,14 @@ import {
   Layers, 
   Zap, 
   LineChart, 
-  ArrowRight,
-  CheckCircle2,
-  Clock
+  ArrowRight, 
+  CheckCircle2, 
+  Clock 
 } from 'lucide-react';
 import { getStudentProgress, getQuizzes } from '../services/api';
 
 export default function StudentDashboard({ user }) {
-  const { user: clerkUser } = useUser();
-  const displayName = clerkUser?.fullName || clerkUser?.firstName || user?.name || 'Student';
+  const displayName = user?.name || 'Student';
   const [progress, setProgress] = useState(null);
   const [quizzes, setQuizzes] = useState([]);
   const [loading, setLoading] = useState(true);

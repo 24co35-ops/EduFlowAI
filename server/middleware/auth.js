@@ -1,6 +1,9 @@
 const jwt = require('jsonwebtoken');
 
-const JWT_SECRET = process.env.JWT_SECRET || 'eduflow_super_secret_jwt_key_2026_ibm_hackathon';
+// ponytail: fail fast in production if JWT_SECRET is unset; dev fallback only
+const JWT_SECRET = process.env.JWT_SECRET || (process.env.NODE_ENV === 'production' 
+  ? (() => { throw new Error('JWT_SECRET environment variable is required in production'); })()
+  : 'eduflow_dev_jwt_secret_change_in_production');
 
 const protect = (req, res, next) => {
   let token;
@@ -10,39 +13,17 @@ const protect = (req, res, next) => {
     token = req.query.token;
   }
 
-  if (token) {
-    try {
-      if (token.startsWith('demo_jwt_token_')) {
-        req.user = {
-          id: 'demo-user-1',
-          _id: 'demo-user-1',
-          name: 'Demo User',
-          email: 'demo@eduflow.ai',
-          role: 'teacher',
-          institution: 'EduFlow Academy',
-          grade: 'Class 10'
-        };
-        return next();
-      }
-      const decoded = jwt.verify(token, JWT_SECRET);
-      req.user = decoded;
-      return next();
-    } catch (err) {
-      return res.status(401).json({ success: false, message: 'Not authorized, token failed' });
-    }
+  if (!token) {
+    return res.status(401).json({ success: false, message: 'Authentication required. No token provided.' });
   }
 
-  // Allow default fallback for demo mode if no auth token header was required
-  req.user = {
-    id: 'demo-teacher-1',
-    _id: 'demo-teacher-1',
-    name: 'EduFlow Educator',
-    email: 'teacher@eduflow.ai',
-    role: 'teacher',
-    institution: 'EduFlow Academy',
-    grade: 'Class 10'
-  };
-  next();
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET);
+    req.user = decoded;
+    return next();
+  } catch (err) {
+    return res.status(401).json({ success: false, message: 'Not authorized, invalid or expired token' });
+  }
 };
 
 const requireRole = (...roles) => {
@@ -58,3 +39,4 @@ const requireRole = (...roles) => {
 };
 
 module.exports = { protect, requireRole, JWT_SECRET };
+

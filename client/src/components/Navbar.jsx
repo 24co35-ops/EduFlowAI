@@ -1,11 +1,9 @@
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Sparkles, LogOut, User, Cpu } from 'lucide-react';
-import { SignedIn, SignedOut, SignInButton, SignUpButton, UserButton, useUser } from '@clerk/clerk-react';
 
 export default function Navbar({ user, setUser }) {
   const navigate = useNavigate();
-  const { user: clerkUser, isSignedIn } = useUser();
 
   const handleLogout = () => {
     localStorage.removeItem('eduflow_token');
@@ -14,7 +12,7 @@ export default function Navbar({ user, setUser }) {
     navigate('/login');
   };
 
-  const displayName = clerkUser?.fullName || clerkUser?.primaryEmailAddress?.emailAddress || user?.name;
+  const displayName = user?.name || 'Educator';
   const roleName = user?.role || 'teacher';
 
   return (
@@ -40,60 +38,48 @@ export default function Navbar({ user, setUser }) {
             </div>
           </Link>
 
-          {/* User Section & Clerk Auth Controls */}
+          {/* User Section */}
           <div className="flex items-center gap-4">
-            
-            {/* Signed-in View */}
-            <SignedIn>
-              <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-800 text-xs">
-                <User className="w-3.5 h-3.5 text-indigo-400" />
-                <span className="text-slate-300 font-medium">{displayName}</span>
-                <span className={`px-2 py-0.5 rounded-md text-[10px] font-semibold uppercase ${
-                  roleName === 'teacher' 
-                    ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20' 
-                    : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-                }`}>
-                  {roleName}
-                </span>
-              </div>
-
-              {/* Clerk User Button Profile */}
-              <UserButton afterSignOutUrl="/" />
-            </SignedIn>
-
-            {/* Signed-out View */}
-            <SignedOut>
+            {user ? (
               <div className="flex items-center gap-3">
-                <SignInButton mode="modal">
-                  <button className="text-xs font-semibold text-slate-300 hover:text-white px-3 py-2 rounded-lg hover:bg-slate-900 transition-colors">
-                    Sign In
-                  </button>
-                </SignInButton>
-
-                <SignUpButton mode="modal">
-                  <button className="text-xs font-semibold px-4 py-2 rounded-lg bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white shadow-lg shadow-indigo-500/20 transition-all hover:shadow-indigo-500/30">
-                    Get Started
-                  </button>
-                </SignUpButton>
-              </div>
-            </SignedOut>
-
-            {/* Local Auth Fallback if signed in without Clerk */}
-            {!isSignedIn && user && (
-              <div className="hidden sm:flex items-center gap-3">
                 <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-800 text-xs">
                   <User className="w-3.5 h-3.5 text-indigo-400" />
-                  <span className="text-slate-300 font-medium">{user.name}</span>
+                  <span className="text-slate-300 font-medium">{displayName}</span>
+                  <span
+                    className={`px-2 py-0.5 rounded-md text-[10px] font-semibold uppercase ${
+                      roleName === 'teacher'
+                        ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                        : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                    }`}
+                  >
+                    {roleName}
+                  </span>
                 </div>
                 <button
                   onClick={handleLogout}
-                  className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 transition-colors border border-transparent hover:border-rose-500/20"
+                  title="Sign Out"
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 transition-colors border border-transparent hover:border-rose-500/20"
                 >
                   <LogOut className="w-4 h-4" />
+                  <span className="hidden sm:inline">Logout</span>
                 </button>
               </div>
+            ) : (
+              <div className="flex items-center gap-3">
+                <Link
+                  to="/login"
+                  className="text-xs font-semibold text-slate-300 hover:text-white px-3 py-2 rounded-lg hover:bg-slate-900 transition-colors"
+                >
+                  Sign In
+                </Link>
+                <Link
+                  to="/register"
+                  className="text-xs font-semibold px-4 py-2 rounded-lg bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white shadow-lg shadow-indigo-500/20 transition-all hover:shadow-indigo-500/30"
+                >
+                  Get Started
+                </Link>
+              </div>
             )}
-
           </div>
 
         </div>
@@ -101,3 +87,4 @@ export default function Navbar({ user, setUser }) {
     </header>
   );
 }
+

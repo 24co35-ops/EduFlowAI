@@ -37,13 +37,12 @@ EduFlow AI eliminates the repetitive grind of education content creation. Teache
 
 | Layer | Technology |
 |---|---|
-| Frontend | React 18, Tailwind CSS, Chart.js |
-| Backend | Node.js 20, Express.js, Socket.io |
-| AI Engine | IBM BOB (watsonx.ai — Granite models) |
-| Database | MongoDB Atlas |
-| File Storage | IBM Cloud Object Storage |
-| Auth | JWT + bcrypt |
-| Deployment | IBM Cloud Code Engine |
+| Frontend | React 18, Vite, Tailwind CSS, Chart.js, Lucide Icons |
+| Backend | Node.js 20, Express.js (REST API) |
+| AI Engine | IBM BOB (watsonx.ai Granite 13B & 20B) + Google Gemini |
+| Database | MongoDB Atlas / Mongoose (with offline dev fallback) |
+| Auth | JWT + bcrypt (Role-Based Access Control: Teacher & Student) |
+| Deployment | Vercel Serverless / Node.js Standalone |
 
 ---
 
@@ -51,22 +50,24 @@ EduFlow AI eliminates the repetitive grind of education content creation. Teache
 
 ```
 eduflow-ai/
-├── client/                  # React frontend
+├── api/                     # Vercel serverless entrypoint
+│   └── index.js
+├── client/                  # React + Vite frontend
 │   ├── src/
-│   │   ├── components/
-│   │   ├── pages/
-│   │   ├── hooks/
-│   │   └── services/
+│   │   ├── components/      # Navbar, Sidebar, etc.
+│   │   ├── pages/           # Dashboards, Quiz, Lesson, Flashcard pages
+│   │   └── services/        # Axios API client with auth interceptor
 │   └── public/
 ├── server/                  # Express backend
-│   ├── controllers/
-│   ├── models/
-│   ├── routes/
-│   ├── services/
-│   │   └── bob.service.js   # IBM BOB integration
-│   └── middleware/
+│   ├── config/              # MongoDB connection
+│   ├── controllers/         # Auth, Lesson, Quiz, Student controllers
+│   ├── middleware/          # JWT protect & requireRole RBAC
+│   ├── models/              # Mongoose schemas (User, Lesson, Quiz, etc.)
+│   ├── routes/              # Express route definitions
+│   ├── services/            # bob.service.js (watsonx.ai integration)
+│   └── utils/               # PDF text extraction
 ├── .env.example
-├── docker-compose.yml
+├── vercel.json
 └── README.md
 ```
 
@@ -76,14 +77,13 @@ eduflow-ai/
 
 ### Prerequisites
 - Node.js 20+
-- MongoDB Atlas account (or local MongoDB)
-- IBM Cloud account with watsonx.ai access
-- IBM Cloud Object Storage bucket
+- MongoDB (Atlas or local instance)
+- Google Gemini API Key and/or IBM watsonx.ai credentials
 
 ### 1. Clone the Repository
 ```bash
-git clone https://github.com/your-username/eduflow-ai.git
-cd eduflow-ai
+git clone https://github.com/24co35-ops/EduFlowAI.git
+cd EduFlowAI
 ```
 
 ### 2. Set Up Environment Variables
@@ -93,53 +93,43 @@ cp .env.example .env
 
 Edit `.env`:
 ```env
-# IBM BOB / watsonx.ai
+# AI Providers
+GEMINI_API_KEY=your_gemini_api_key
+GEMINI_MODEL=gemini-1.5-flash
+
+# IBM BOB / watsonx.ai (Optional)
 WATSONX_URL=https://us-south.ml.cloud.ibm.com
 IBM_API_KEY=your_ibm_api_key
 WATSONX_PROJECT_ID=your_project_id
 
 # MongoDB
-MONGO_URI=mongodb+srv://username:password@cluster.mongodb.net/eduflow
+MONGO_URI=mongodb://localhost:27017/eduflow
 
-# Auth
-JWT_SECRET=your_super_secret_key
-
-# IBM Cloud Object Storage
-IBM_COS_API_KEY=your_cos_api_key
-IBM_COS_BUCKET=eduflow-uploads
-IBM_COS_ENDPOINT=https://s3.us-south.cloud-object-storage.appdomain.cloud
+# Auth & CORS
+JWT_SECRET=your_super_secret_jwt_key
+CLIENT_URL=http://localhost:5173
 ```
 
 ### 3. Install Dependencies
 
 ```bash
-# Backend
-cd server
-npm install
-
-# Frontend
-cd ../client
-npm install
+# From repository root
+npm run install:all
 ```
 
 ### 4. Run the Application
 
 ```bash
-# Start backend (from /server)
-npm run dev
+# Start backend (port 5000)
+npm run server
 
-# Start frontend (from /client)
-npm start
+# Start frontend (port 5173) in another terminal
+npm run client
 ```
 
 App runs at:
-- Frontend: `http://localhost:3000`
+- Frontend: `http://localhost:5173`
 - Backend API: `http://localhost:5000`
-
-### 5. Run with Docker (Optional)
-```bash
-docker-compose up --build
-```
 
 ---
 

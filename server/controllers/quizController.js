@@ -81,8 +81,9 @@ exports.generateQuiz = async (req, res) => {
     // Call IBM BOB engine
     const questions = await bobService.generateQuiz(topic, difficulty, questionCount);
 
+    const userId = req.user.id || req.user._id;
     const quizData = {
-      teacherId: req.user ? (req.user.id || req.user._id) : 'demo-teacher-1',
+      teacherId: userId,
       topic,
       difficulty,
       questions,
@@ -105,11 +106,18 @@ exports.generateQuiz = async (req, res) => {
 
 exports.getQuizzes = async (req, res) => {
   try {
+    const userId = req.user.id || req.user._id;
+    // ponytail: teacher sees their authored quizzes; student sees published quizzes
+    const filter = req.user.role === 'teacher' ? { teacherId: userId } : { status: 'published' };
+
     if (getIsConnected()) {
-      const quizzes = await Quiz.find().sort({ createdAt: -1 });
+      const quizzes = await Quiz.find(filter).sort({ createdAt: -1 });
       return res.json({ success: true, quizzes });
     }
-    return res.json({ success: true, quizzes: memoryQuizzes });
+    const quizzes = req.user.role === 'teacher'
+      ? memoryQuizzes.filter(q => String(q.teacherId) === String(userId))
+      : memoryQuizzes.filter(q => q.status === 'published');
+    return res.json({ success: true, quizzes });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
@@ -128,6 +136,12 @@ exports.getQuizById = async (req, res) => {
     if (!quiz) {
       return res.status(404).json({ success: false, message: 'Quiz not found' });
     }
+
+    const userId = req.user.id || req.user._id;
+    if (req.user.role === 'teacher' && String(quiz.teacherId) !== String(userId) && req.user.role !== 'admin') {
+      return res.status(403).json({ success: false, message: 'Access denied: You do not own this quiz' });
+    }
+
     return res.json({ success: true, quiz });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -188,10 +202,11 @@ exports.gradeAttempt = async (req, res) => {
     }
 
     const percentage = Math.round((totalScore / maxScore) * 100);
+    const userId = req.user.id || req.user._id;
 
     const attemptData = {
-      studentId: req.user ? (req.user.id || req.user._id) : 'demo-student-1',
-      studentName: req.user ? req.user.name : 'Rohan Gupta',
+      studentId: userId,
+      studentName: req.user.name || 'Student',
       quizId: quiz._id,
       topic: quiz.topic,
       answers: gradedAnswers,
@@ -215,6 +230,19 @@ exports.gradeAttempt = async (req, res) => {
 
 exports.getAttempts = async (req, res) => {
   try {
+    const userId = req.user.id || req.user._id;
+
+    // ponytail: students only receive their own attempts; teachers view class attempts
+    if (req.user.role === 'student') {
+      if (getIsConnected()) {
+        const attempts = await Attempt.find({ studentId: userId }).sort({ createdAt: -1 });
+        return res.json({ success: true, attempts });
+      }
+      const attempts = memoryAttempts.filter(a => String(a.studentId) === String(userId));
+      return res.json({ success: true, attempts });
+    }
+
+    // Teacher or admin access
     if (getIsConnected()) {
       const attempts = await Attempt.find().sort({ createdAt: -1 });
       return res.json({ success: true, attempts });
@@ -224,3 +252,7 @@ exports.getAttempts = async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
+
+exports.memoryAttempts = memoryAttempts;
+
+

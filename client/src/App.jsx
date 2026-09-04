@@ -13,6 +13,17 @@ import FlashcardsPage from './pages/FlashcardsPage';
 import QuizAttemptPage from './pages/QuizAttemptPage';
 import StudentProgressPage from './pages/StudentProgressPage';
 
+// ponytail: declarative route guard for authentication & role permissions
+function ProtectedRoute({ user, allowedRoles, children }) {
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
+  if (allowedRoles && !allowedRoles.includes(user.role)) {
+    return <Navigate to="/" replace />;
+  }
+  return children;
+}
+
 export default function App() {
   const [user, setUser] = useState(() => {
     const saved = localStorage.getItem('eduflow_user');
@@ -33,8 +44,8 @@ export default function App() {
           <div className="flex-1 min-w-0">
             <Routes>
               {/* Auth Routes */}
-              <Route path="/login" element={<LoginPage setUser={setUser} />} />
-              <Route path="/register" element={<RegisterPage setUser={setUser} />} />
+              <Route path="/login" element={user ? <Navigate to="/" replace /> : <LoginPage setUser={setUser} />} />
+              <Route path="/register" element={user ? <Navigate to="/" replace /> : <RegisterPage setUser={setUser} />} />
 
               {/* Dashboard Home Route (Role-based) */}
               <Route
@@ -53,15 +64,64 @@ export default function App() {
               />
 
               {/* Teacher Routes */}
-              <Route path="/lesson-planner" element={<LessonPlannerPage />} />
-              <Route path="/quiz-builder" element={<QuizBuilderPage />} />
-              <Route path="/analytics" element={<ClassAnalyticsPage />} />
+              <Route
+                path="/lesson-planner"
+                element={
+                  <ProtectedRoute user={user} allowedRoles={['teacher']}>
+                    <LessonPlannerPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/quiz-builder"
+                element={
+                  <ProtectedRoute user={user} allowedRoles={['teacher']}>
+                    <QuizBuilderPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/analytics"
+                element={
+                  <ProtectedRoute user={user} allowedRoles={['teacher']}>
+                    <ClassAnalyticsPage />
+                  </ProtectedRoute>
+                }
+              />
 
               {/* Student Routes */}
-              <Route path="/doubt-solver" element={<DoubtSolverPage user={user} />} />
-              <Route path="/flashcards" element={<FlashcardsPage />} />
-              <Route path="/quizzes" element={<QuizAttemptPage />} />
-              <Route path="/progress" element={<StudentProgressPage />} />
+              <Route
+                path="/doubt-solver"
+                element={
+                  <ProtectedRoute user={user} allowedRoles={['student']}>
+                    <DoubtSolverPage user={user} />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/flashcards"
+                element={
+                  <ProtectedRoute user={user} allowedRoles={['student']}>
+                    <FlashcardsPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/quizzes"
+                element={
+                  <ProtectedRoute user={user} allowedRoles={['student']}>
+                    <QuizAttemptPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/progress"
+                element={
+                  <ProtectedRoute user={user} allowedRoles={['student']}>
+                    <StudentProgressPage />
+                  </ProtectedRoute>
+                }
+              />
 
               {/* Catch-all Fallback */}
               <Route path="*" element={<Navigate to="/" replace />} />

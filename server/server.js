@@ -1,19 +1,32 @@
 const express = require('express');
-const http = require('http');
 const cors = require('cors');
 const dotenv = require('dotenv');
-const { Server } = require('socket.io');
-const { connectDB } = require('./config/db');
+const { connectDB, getIsConnected } = require('./config/db');
 const bobService = require('./services/bob.service');
 
 // Load environment variables
 dotenv.config();
 
 const app = express();
-const server = http.createServer(app);
 
-// Middleware
-app.use(cors());
+// ponytail: restrict CORS to configured frontend or dev origins instead of open '*'
+const allowedOrigins = process.env.CLIENT_URL
+  ? process.env.CLIENT_URL.split(',').map((s) => s.trim())
+  : ['http://localhost:5173', 'http://localhost:3000'];
+
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      if (!origin || allowedOrigins.includes(origin) || process.env.NODE_ENV !== 'production') {
+        callback(null, true);
+      } else {
+        callback(new Error('Blocked by CORS policy'));
+      }
+    },
+    credentials: true
+  })
+);
+
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
@@ -31,58 +44,24 @@ app.get(['/api/health', '/health'], (req, res) => {
   res.json({
     status: 'online',
     appName: 'EduFlow AI Backend',
+    databaseConnected: getIsConnected(),
     watsonxConfigured: bobService.isConfigured(),
+    geminiConfigured: Boolean(process.env.GEMINI_API_KEY && process.env.GEMINI_API_KEY.trim().length > 10),
     timestamp: new Date()
   });
 });
 
-// Socket.io Real-time Doubt Solver Chat
-const io = new Server(server, {
-  cors: {
-    origin: '*',
-    methods: ['GET', 'POST']
-  }
-});
-
-io.on('connection', (socket) => {
-  console.log(`[Socket.io] Client connected: ${socket.id}`);
-
-  socket.on('send_message', async (data) => {
-    try {
-      const { message, syllabusScope, history } = data;
-      socket.emit('bot_status', { status: 'thinking' });
-      const bobResponse = await bobService.solveDoubt(message, history || [], syllabusScope || '');
-
-      socket.emit('receive_message', {
-        id: 'msg-' + Date.now(),
-        sender: 'bob',
-        text: bobResponse,
-        timestamp: new Date()
-      });
-    } catch (err) {
-      socket.emit('receive_message', {
-        id: 'msg-err-' + Date.now(),
-        sender: 'bob',
-        text: 'I encountered an error processing your query. Please try asking again.',
-        timestamp: new Date()
-      });
-    }
-  });
-
-  socket.on('disconnect', () => {
-    console.log(`[Socket.io] Client disconnected: ${socket.id}`);
-  });
-});
-
-// Start Server conditionally (only in standalone Node mode, not on Vercel)
-if (process.env.VERCEL !== '1') {
+// ponytail: start listener only when run directly as main script
+if (require.main === module && process.env.VERCEL !== '1') {
   const PORT = process.env.PORT || 5000;
-  server.listen(PORT, () => {
+  app.listen(PORT, () => {
     console.log(`==================================================`);
     console.log(`🚀 EduFlow AI Backend Server running on port ${PORT}`);
     console.log(`⚡ IBM BOB watsonx.ai Engine: ${bobService.isConfigured() ? 'LIVE API KEY CONNECTED' : 'OFFLINE DEMO MODE (Smart Engine active)'}`);
+    console.log(`⚡ Gemini Engine: ${process.env.GEMINI_API_KEY ? 'CONFIGURED' : 'NOT CONFIGURED'}`);
     console.log(`==================================================`);
   });
 }
 
 module.exports = app;
+

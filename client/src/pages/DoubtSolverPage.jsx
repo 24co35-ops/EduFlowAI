@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useUser } from '@clerk/clerk-react';
 import { 
   Sparkles, 
   Send, 
@@ -13,8 +12,7 @@ import {
 import API from '../services/api';
 
 export default function DoubtSolverPage({ user }) {
-  const { user: clerkUser } = useUser();
-  const displayName = clerkUser?.firstName || user?.name || 'Student';
+  const displayName = user?.name || 'Student';
 
   const [messages, setMessages] = useState([
     {

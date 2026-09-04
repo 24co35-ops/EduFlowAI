@@ -6,8 +6,9 @@ const { protect, requireRole } = require('../middleware/auth');
 
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 
-router.post('/generate', protect, upload.single('syllabus'), lessonController.generateLessonPlan);
-router.post('/translate', protect, lessonController.translateLessonPlan);
+// ponytail: teacher-only endpoints guarded by requireRole
+router.post('/generate', protect, requireRole('teacher'), upload.single('syllabus'), lessonController.generateLessonPlan);
+router.post('/translate', protect, requireRole('teacher'), lessonController.translateLessonPlan);
 router.get('/', protect, lessonController.getLessons);
 router.get('/:id', protect, lessonController.getLessonById);
 

@@ -1,6 +1,5 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { useUser } from '@clerk/clerk-react';
 import { 
   LayoutDashboard, 
   BookOpen, 
@@ -9,15 +8,14 @@ import {
   MessageSquareCode, 
   Layers, 
   LineChart, 
-  Sparkles,
-  Zap,
-  GraduationCap
+  Sparkles, 
+  Zap, 
+  GraduationCap 
 } from 'lucide-react';
 
 export default function Sidebar({ user }) {
-  const { user: clerkUser } = useUser();
   const isTeacher = user?.role === 'teacher';
-  const displayName = clerkUser?.fullName || clerkUser?.firstName || user?.name || 'Educator';
+  const displayName = user?.name || 'Educator';
 
   const teacherNav = [
     { name: 'Dashboard', path: '/', icon: LayoutDashboard },
