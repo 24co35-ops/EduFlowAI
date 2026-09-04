@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import { Sparkles, User, Lock, Mail, Building, ArrowRight } from 'lucide-react';
-import { loginUser, registerUser } from '../services/api';
+import { useNavigate, useParams, Link } from 'react-router-dom';
+import { Sparkles, User, Lock, Mail, Building, ArrowRight, KeyRound, CheckCircle } from 'lucide-react';
+import { loginUser, registerUser, forgotPassword, resetPassword } from '../services/api';
 
 export function LoginPage({ setUser }) {
   const [email, setEmail] = useState('teacher@eduflow.ai');
@@ -106,7 +106,12 @@ export function LoginPage({ setUser }) {
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-slate-300 mb-1">Password</label>
+            <div className="flex items-center justify-between mb-1">
+              <label className="block text-xs font-medium text-slate-300">Password</label>
+              <Link to="/forgot-password" className="text-xs text-indigo-400 hover:text-indigo-300 hover:underline transition-colors">
+                Forgot password?
+              </Link>
+            </div>
             <div className="relative">
               <Lock className="w-4 h-4 text-slate-500 absolute left-3 top-3" />
               <input
@@ -302,6 +307,207 @@ export function RegisterPage({ setUser }) {
             </Link>
           </p>
         </div>
+
+      </div>
+    </div>
+  );
+}
+
+export function ForgotPasswordPage() {
+  const [email, setEmail] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState('');
+  const [error, setError] = useState('');
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
+    setMessage('');
+    try {
+      const res = await forgotPassword(email);
+      setMessage(res.data.message);
+    } catch (err) {
+      setError(err.response?.data?.message || 'Something went wrong. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="min-h-[85vh] flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-md w-full glass-card p-8 rounded-3xl border border-slate-800 shadow-2xl space-y-6">
+
+        <div className="text-center space-y-2">
+          <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-indigo-600/20 text-indigo-400 mb-2 border border-indigo-500/30">
+            <KeyRound className="w-6 h-6 text-indigo-400" />
+          </div>
+          <h2 className="text-2xl font-bold text-white font-outfit">Forgot Password</h2>
+          <p className="text-xs text-slate-400">Enter your email and we'll send you a reset link</p>
+        </div>
+
+        {error && (
+          <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs font-medium text-center">
+            {error}
+          </div>
+        )}
+
+        {message ? (
+          <div className="space-y-4">
+            <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-medium text-center flex flex-col items-center gap-2">
+              <CheckCircle className="w-6 h-6" />
+              <span>{message}</span>
+              <span className="text-slate-400">Check your inbox (or the server console in demo mode).</span>
+            </div>
+            <Link to="/login" className="block w-full py-3 px-4 rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 text-white text-xs font-bold text-center shadow-lg shadow-indigo-600/30 transition-all hover:opacity-90">
+              Back to Sign In
+            </Link>
+          </div>
+        ) : (
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label className="block text-xs font-medium text-slate-300 mb-1">Email Address</label>
+              <div className="relative">
+                <Mail className="w-4 h-4 text-slate-500 absolute left-3 top-3" />
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  autoFocus
+                  className="w-full pl-9 pr-4 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-white text-xs focus:outline-none focus:border-indigo-500 transition-colors"
+                  placeholder="you@school.edu"
+                />
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white text-xs font-bold shadow-lg shadow-indigo-600/30 flex items-center justify-center gap-2 transition-all disabled:opacity-50"
+            >
+              {loading ? 'Sending...' : (<><span>Send Reset Link</span><ArrowRight className="w-4 h-4" /></>)}
+            </button>
+
+            <div className="text-center">
+              <Link to="/login" className="text-xs text-indigo-400 hover:underline font-semibold">
+                ← Back to Sign In
+              </Link>
+            </div>
+          </form>
+        )}
+
+      </div>
+    </div>
+  );
+}
+
+export function ResetPasswordPage() {
+  const { token } = useParams();
+  const navigate = useNavigate();
+  const [password, setPassword] = useState('');
+  const [confirm, setConfirm] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState('');
+  const [error, setError] = useState('');
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (password !== confirm) {
+      setError('Passwords do not match.');
+      return;
+    }
+    if (password.length < 8) {
+      setError('Password must be at least 8 characters.');
+      return;
+    }
+    setLoading(true);
+    setError('');
+    try {
+      const res = await resetPassword(token, password);
+      setMessage(res.data.message);
+      setTimeout(() => navigate('/login'), 2500);
+    } catch (err) {
+      setError(err.response?.data?.message || 'Reset failed. The link may have expired.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="min-h-[85vh] flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-md w-full glass-card p-8 rounded-3xl border border-slate-800 shadow-2xl space-y-6">
+
+        <div className="text-center space-y-2">
+          <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-indigo-600/20 text-indigo-400 mb-2 border border-indigo-500/30">
+            <KeyRound className="w-6 h-6 text-indigo-400" />
+          </div>
+          <h2 className="text-2xl font-bold text-white font-outfit">Set New Password</h2>
+          <p className="text-xs text-slate-400">Choose a strong password for your account</p>
+        </div>
+
+        {error && (
+          <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs font-medium text-center">
+            {error}
+          </div>
+        )}
+
+        {message ? (
+          <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-medium text-center flex flex-col items-center gap-2">
+            <CheckCircle className="w-6 h-6" />
+            <span>{message}</span>
+            <span className="text-slate-400">Redirecting to login...</span>
+          </div>
+        ) : (
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label className="block text-xs font-medium text-slate-300 mb-1">New Password</label>
+              <div className="relative">
+                <Lock className="w-4 h-4 text-slate-500 absolute left-3 top-3" />
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  minLength={8}
+                  autoFocus
+                  className="w-full pl-9 pr-4 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-white text-xs focus:outline-none focus:border-indigo-500 transition-colors"
+                  placeholder="Min. 8 characters"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-slate-300 mb-1">Confirm Password</label>
+              <div className="relative">
+                <Lock className="w-4 h-4 text-slate-500 absolute left-3 top-3" />
+                <input
+                  type="password"
+                  value={confirm}
+                  onChange={(e) => setConfirm(e.target.value)}
+                  required
+                  className={`w-full pl-9 pr-4 py-2.5 rounded-xl bg-slate-900 border text-white text-xs focus:outline-none transition-colors ${
+                    confirm && confirm !== password
+                      ? 'border-rose-500 focus:border-rose-500'
+                      : 'border-slate-800 focus:border-indigo-500'
+                  }`}
+                  placeholder="••••••••"
+                />
+              </div>
+              {confirm && confirm !== password && (
+                <p className="text-xs text-rose-400 mt-1">Passwords don't match</p>
+              )}
+            </div>
+
+            <button
+              type="submit"
+              disabled={loading || (confirm && confirm !== password)}
+              className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white text-xs font-bold shadow-lg shadow-indigo-600/30 flex items-center justify-center gap-2 transition-all disabled:opacity-50"
+            >
+              {loading ? 'Resetting...' : (<><span>Reset Password</span><ArrowRight className="w-4 h-4" /></>)}
+            </button>
+          </form>
+        )}
 
       </div>
     </div>

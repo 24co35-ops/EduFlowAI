@@ -1,8 +1,14 @@
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
+const crypto = require('crypto');
 const User = require('../models/User');
 const { getIsConnected } = require('../config/db');
 const { JWT_SECRET } = require('../middleware/auth');
+const { sendResetEmail } = require('../utils/mailer');
+
+// In-memory reset token store for demo mode (when MongoDB is not connected)
+// Map<token, { email, expiry }>
+const memResetTokens = new Map();
 
 // ponytail: email regex standard validation
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -168,5 +174,75 @@ exports.getMe = async (req, res) => {
     success: true,
     user: req.user
   });
+};
+
+exports.forgotPassword = async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ success: false, message: 'Email is required' });
+
+    const cleanEmail = String(email).trim().toLowerCase();
+    const token = crypto.randomBytes(32).toString('hex');
+    const expiry = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+    const resetUrl = `${process.env.CLIENT_URL || 'http://localhost:5173'}/reset-password/${token}`;
+
+    if (getIsConnected()) {
+      const user = await User.findOne({ email: cleanEmail });
+      if (user) {
+        user.resetToken = token;
+        user.resetTokenExpiry = expiry;
+        await user.save();
+        await sendResetEmail(cleanEmail, resetUrl);
+      }
+    } else {
+      const memUser = memoryUsers.find(u => u.email === cleanEmail);
+      if (memUser) {
+        memResetTokens.set(token, { email: cleanEmail, expiry });
+        await sendResetEmail(cleanEmail, resetUrl);
+      }
+    }
+
+    // Always return success to avoid user enumeration
+    return res.json({ success: true, message: 'If that email exists, a reset link has been sent.' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+exports.resetPassword = async (req, res) => {
+  try {
+    const { token } = req.params;
+    const { password } = req.body;
+    if (!password || password.length < 8) {
+      return res.status(400).json({ success: false, message: 'Password must be at least 8 characters' });
+    }
+
+    const passwordHash = await bcrypt.hash(password, 10);
+
+    if (getIsConnected()) {
+      const user = await User.findOne({
+        resetToken: token,
+        resetTokenExpiry: { $gt: new Date() }
+      });
+      if (!user) return res.status(400).json({ success: false, message: 'Reset link is invalid or has expired' });
+      user.passwordHash = passwordHash;
+      user.resetToken = null;
+      user.resetTokenExpiry = null;
+      await user.save();
+    } else {
+      const entry = memResetTokens.get(token);
+      if (!entry || entry.expiry < new Date()) {
+        return res.status(400).json({ success: false, message: 'Reset link is invalid or has expired' });
+      }
+      const memUser = memoryUsers.find(u => u.email === entry.email);
+      if (!memUser) return res.status(400).json({ success: false, message: 'User not found' });
+      memUser.passwordHash = passwordHash;
+      memResetTokens.delete(token);
+    }
+
+    return res.json({ success: true, message: 'Password reset successfully. You can now log in.' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
 };
 

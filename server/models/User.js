@@ -7,7 +7,9 @@ const userSchema = new mongoose.Schema(
     passwordHash: { type: String, required: true },
     role: { type: String, enum: ['teacher', 'student', 'admin'], default: 'teacher' },
     institution: { type: String, default: 'Greenwood High School' },
-    grade: { type: String, default: 'Class 10' }
+    grade: { type: String, default: 'Class 10' },
+    resetToken: { type: String, default: null },
+    resetTokenExpiry: { type: Date, default: null }
   },
   { timestamps: true }
 );
