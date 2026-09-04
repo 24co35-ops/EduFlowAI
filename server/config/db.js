@@ -27,7 +27,7 @@ const connectDB = async () => {
   }
 };
 
-const getIsConnected = () => isConnected;
+const getIsConnected = () => mongoose.connection.readyState === 1 || isConnected;
 
 module.exports = { connectDB, getIsConnected };
 
