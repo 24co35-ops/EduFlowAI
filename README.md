@@ -135,44 +135,54 @@ App runs at:
 
 ## 🔌 IBM BOB Integration
 
-All AI features route through `server/services/bob.service.js`:
+All AI features route through `server/services/bob.service.js` with direct IAM authentication and automatic fallback:
 
 ```javascript
-const { WatsonXAI } = require('@ibm-cloud/watsonx-ai');
-const { IamAuthenticator } = require('ibm-watson/auth');
+// Example: Direct REST IAM integration in server/services/bob.service.js
+const tokenRes = await axios.post(
+  'https://iam.cloud.ibm.com/identity/token',
+  new URLSearchParams({
+    grant_type: 'urn:ibm:params:oauth:grant-type:apikey',
+    apikey: process.env.IBM_API_KEY
+  })
+);
 
-const client = new WatsonXAI({
-  version: '2024-05-31',
-  serviceUrl: process.env.WATSONX_URL,
-  authenticator: new IamAuthenticator({ apikey: process.env.IBM_API_KEY })
-});
-
-async function generateContent(prompt) {
-  const response = await client.generateText({
-    modelId: 'ibm/granite-13b-instruct-v2',
-    projectId: process.env.WATSONX_PROJECT_ID,
-    input: prompt,
-    parameters: { max_new_tokens: 800, temperature: 0.7 }
-  });
-  return response.result.results[0].generated_text;
-}
+const response = await axios.post(
+  `${process.env.WATSONX_URL}/ml/v1/text/generation?version=2024-05-31`,
+  {
+    model_id: 'ibm/granite-13b-instruct-v2',
+    project_id: process.env.WATSONX_PROJECT_ID,
+    input: `Generate a structured lesson plan for: ${syllabus}`,
+    parameters: { max_new_tokens: 1500, temperature: 0.7 }
+  },
+  { headers: { Authorization: `Bearer ${tokenRes.data.access_token}` } }
+);
 ```
 
 ---
 
 ## 📡 API Reference
 
-| Method | Endpoint | Description |
-|---|---|---|
-| POST | `/api/auth/register` | Register user |
-| POST | `/api/auth/login` | Login, get JWT |
-| POST | `/api/lessons/generate` | Generate lesson plan from syllabus PDF |
-| GET | `/api/lessons` | Get all lessons |
-| POST | `/api/quizzes/generate` | Generate quiz for a topic |
-| POST | `/api/quizzes/grade` | Auto-grade student attempt |
-| POST | `/api/flashcards/generate` | Generate flashcards from text |
-| GET | `/api/progress` | Get student progress summary |
-| WS | `/chat` | Real-time doubt solver |
+| Method | Endpoint | Description | Auth Required |
+|---|---|---|---|
+| POST | `/api/auth/register` | Register user (min 8 char password) | No |
+| POST | `/api/auth/login` | Login, get JWT token | No |
+| POST | `/api/auth/forgot-password` | Request password reset email | No |
+| POST | `/api/auth/reset-password/:token` | Reset password with token | No |
+| GET | `/api/health` | Healthcheck & AI engine status | No |
+| POST | `/api/lessons/generate` | Generate lesson plan from syllabus PDF | Yes (Teacher) |
+| POST | `/api/lessons/translate` | Translate lesson plan (multilingual) | Yes (Teacher) |
+| GET | `/api/lessons` | Get teacher's own lesson plans | Yes |
+| GET | `/api/lessons/:id` | Get specific lesson plan | Yes |
+| POST | `/api/quizzes/generate` | Generate quiz for a topic | Yes (Teacher) |
+| POST | `/api/quizzes/grade` | Auto-grade student attempt | Yes (Student) |
+| GET | `/api/quizzes` | Get quizzes | Yes |
+| GET | `/api/quizzes/attempts` | Get quiz attempt history | Yes |
+| POST | `/api/student/flashcards/generate` | Generate flashcards from text | Yes (Student) |
+| GET | `/api/student/flashcards` | Get student flashcard decks | Yes (Student) |
+| GET | `/api/student/progress` | Get student score history & streak | Yes (Student) |
+| GET | `/api/student/analytics` | Get class analytics dashboard data | Yes (Teacher) |
+| POST | `/api/student/doubt` | AI curriculum-aligned doubt solver | Yes |
 
 ---
 
