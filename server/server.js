@@ -1,5 +1,8 @@
 const express = require('express');
 const cors = require('cors');
+const helmet = require('helmet');
+const mongoSanitize = require('express-mongo-sanitize');
+const rateLimit = require('express-rate-limit');
 const dotenv = require('dotenv');
 const { connectDB, getIsConnected } = require('./config/db');
 const bobService = require('./services/bob.service');
@@ -8,6 +11,9 @@ const bobService = require('./services/bob.service');
 dotenv.config();
 
 const app = express();
+
+// Security headers
+app.use(helmet());
 
 // ponytail: restrict CORS to configured frontend or dev origins instead of open '*'
 const allowedOrigins = process.env.CLIENT_URL
@@ -30,11 +36,16 @@ app.use(
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
+// Strip $ and . from request bodies to prevent NoSQL injection
+app.use(mongoSanitize());
+
 // Connect to MongoDB
 connectDB();
 
-// API Routes (supports both local /api/ path and Vercel serverless / path)
-app.use(['/api/auth', '/auth'], require('./routes/auth.routes'));
+// API Routes
+// ponytail: rate-limit auth endpoints to block brute-force attacks
+const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 20, standardHeaders: true, legacyHeaders: false });
+app.use(['/api/auth', '/auth'], authLimiter, require('./routes/auth.routes'));
 app.use(['/api/lessons', '/lessons'], require('./routes/lesson.routes'));
 app.use(['/api/quizzes', '/quizzes'], require('./routes/quiz.routes'));
 app.use(['/api/student', '/student'], require('./routes/student.routes'));
