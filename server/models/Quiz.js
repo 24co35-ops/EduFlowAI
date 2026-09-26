@@ -21,4 +21,6 @@ const quizSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+quizSchema.index({ teacherId: 1 });
+
 module.exports = mongoose.model('Quiz', quizSchema);

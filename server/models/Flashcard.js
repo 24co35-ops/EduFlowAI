@@ -15,4 +15,6 @@ const flashcardSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+flashcardSchema.index({ studentId: 1 });
+
 module.exports = mongoose.model('Flashcard', flashcardSchema);

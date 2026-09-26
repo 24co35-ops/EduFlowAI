@@ -6,15 +6,18 @@ const { getIsConnected } = require('../config/db');
 const { JWT_SECRET } = require('../middleware/auth');
 const { sendResetEmail } = require('../utils/mailer');
 
-// In-memory reset token store for demo mode (when MongoDB is not connected)
+const IS_PRODUCTION = process.env.NODE_ENV === 'production';
+
+// In-memory reset token store for demo mode (when MongoDB is not connected, dev only)
 // Map<token, { email, expiry }>
 const memResetTokens = new Map();
 
 // ponytail: email regex standard validation
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-// Memory store fallback for demo mode
-const memoryUsers = [
+// Memory store fallback — only used in development / demo mode (never in production).
+// Demo credentials: teacher@eduflow.ai / teacher123 | student@eduflow.ai / student123
+const memoryUsers = IS_PRODUCTION ? [] : [
   {
     _id: 'demo-teacher-1',
     name: 'Anita Sharma',
@@ -34,6 +37,13 @@ const memoryUsers = [
     grade: 'Class 10'
   }
 ];
+
+// Helper: return 503 when DB is unavailable in production.
+const dbUnavailable = (res) =>
+  res.status(503).json({
+    success: false,
+    message: 'Service temporarily unavailable. Database connection required in production.'
+  });
 
 const generateToken = (user) => {
   return jwt.sign(
@@ -90,7 +100,9 @@ exports.register = async (req, res) => {
       });
     }
 
-    // In-memory fallback (only when MongoDB is not connected)
+    // In-memory fallback — development / demo mode only.
+    if (IS_PRODUCTION) return dbUnavailable(res);
+
     const existingMem = memoryUsers.find(u => u.email.toLowerCase() === cleanEmail);
     if (existingMem) {
       return res.status(400).json({ success: false, message: 'User already exists in demo storage' });
@@ -138,7 +150,8 @@ exports.login = async (req, res) => {
     if (getIsConnected()) {
       foundUser = await User.findOne({ email: cleanEmail });
     } else {
-      // In-memory lookup only in offline/demo mode
+      // In-memory lookup only in development / demo mode.
+      if (IS_PRODUCTION) return dbUnavailable(res);
       foundUser = memoryUsers.find(u => u.email.toLowerCase() === cleanEmail);
     }
 
@@ -195,6 +208,7 @@ exports.forgotPassword = async (req, res) => {
         await sendResetEmail(cleanEmail, resetUrl);
       }
     } else {
+      if (IS_PRODUCTION) return dbUnavailable(res);
       const memUser = memoryUsers.find(u => u.email === cleanEmail);
       if (memUser) {
         memResetTokens.set(token, { email: cleanEmail, expiry });
@@ -230,6 +244,7 @@ exports.resetPassword = async (req, res) => {
       user.resetTokenExpiry = null;
       await user.save();
     } else {
+      if (IS_PRODUCTION) return dbUnavailable(res);
       const entry = memResetTokens.get(token);
       if (!entry || entry.expiry < new Date()) {
         return res.status(400).json({ success: false, message: 'Reset link is invalid or has expired' });
@@ -245,4 +260,3 @@ exports.resetPassword = async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
-

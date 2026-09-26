@@ -49,21 +49,42 @@ connectDB();
 // ponytail: rate-limit auth endpoints — trust Vercel/proxy forwarded IPs
 app.set('trust proxy', 1);
 const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 20, standardHeaders: true, legacyHeaders: false });
+
+// AI generation endpoints: 10 requests per 15 minutes per IP
+const aiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many AI generation requests. Please wait 15 minutes before trying again.' }
+});
+
 app.use(['/api/auth', '/auth'], authLimiter, require('./routes/auth.routes'));
 app.use(['/api/lessons', '/lessons'], require('./routes/lesson.routes'));
 app.use(['/api/quizzes', '/quizzes'], require('./routes/quiz.routes'));
 app.use(['/api/student', '/student'], require('./routes/student.routes'));
 
+// Apply AI rate limiter to all AI generation routes
+app.use(['/api/lessons/generate', '/lessons/generate'], aiLimiter);
+app.use(['/api/quizzes/generate', '/quizzes/generate'], aiLimiter);
+app.use(['/api/student/flashcards/generate', '/student/flashcards/generate'], aiLimiter);
+app.use(['/api/student/doubt', '/student/doubt'], aiLimiter);
+
 // Healthcheck
 app.get(['/api/health', '/health'], (req, res) => {
-  res.json({
+  const IS_PRODUCTION = process.env.NODE_ENV === 'production';
+  const payload = {
     status: 'online',
     appName: 'EduFlow AI Backend',
     databaseConnected: getIsConnected(),
-    watsonxConfigured: bobService.isConfigured(),
-    geminiConfigured: Boolean(process.env.GEMINI_API_KEY && process.env.GEMINI_API_KEY.trim().length > 10),
     timestamp: new Date()
-  });
+  };
+  // In production do not expose which AI providers are configured
+  if (!IS_PRODUCTION) {
+    payload.watsonxConfigured = bobService.isConfigured();
+    payload.geminiConfigured = Boolean(process.env.GEMINI_API_KEY && process.env.GEMINI_API_KEY.trim().length > 10);
+  }
+  res.json(payload);
 });
 
 // ponytail: start listener only when run directly as main script

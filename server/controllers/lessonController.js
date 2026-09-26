@@ -3,8 +3,17 @@ const bobService = require('../services/bob.service');
 const { extractTextFromBuffer } = require('../utils/pdfParser');
 const { getIsConnected } = require('../config/db');
 
-// In-memory store for fallback demo mode
-const memoryLessons = [
+const IS_PRODUCTION = process.env.NODE_ENV === 'production';
+
+// Helper: return 503 when DB is unavailable in production.
+const dbUnavailable = (res) =>
+  res.status(503).json({
+    success: false,
+    message: 'Service temporarily unavailable. Database connection required in production.'
+  });
+
+// In-memory store for fallback demo mode (development only)
+const memoryLessons = IS_PRODUCTION ? [] : [
   {
     _id: 'lesson-demo-1',
     teacherId: 'demo-teacher-1',
@@ -92,7 +101,8 @@ exports.generateLessonPlan = async (req, res) => {
       return res.status(201).json({ success: true, lesson: savedLesson });
     }
 
-    // Fallback store
+    // Fallback store — development / demo mode only.
+    if (IS_PRODUCTION) return dbUnavailable(res);
     const memLesson = { _id: 'lesson-' + Date.now(), ...lessonData, createdAt: new Date() };
     memoryLessons.unshift(memLesson);
     return res.status(201).json({ success: true, lesson: memLesson });
@@ -109,6 +119,7 @@ exports.translateLessonPlan = async (req, res) => {
     if (getIsConnected()) {
       lesson = await Lesson.findById(lessonId);
     } else {
+      if (IS_PRODUCTION) return dbUnavailable(res);
       lesson = memoryLessons.find(l => l._id === lessonId);
     }
 
@@ -150,7 +161,10 @@ exports.getLessons = async (req, res) => {
       const lessons = await Lesson.find(filter).sort({ createdAt: -1 });
       return res.json({ success: true, lessons });
     }
-    const lessons = req.user.role === 'teacher' 
+
+    // Development / demo mode fallback only.
+    if (IS_PRODUCTION) return dbUnavailable(res);
+    const lessons = req.user.role === 'teacher'
       ? memoryLessons.filter(l => String(l.teacherId) === String(userId))
       : memoryLessons;
     return res.json({ success: true, lessons });
@@ -166,6 +180,7 @@ exports.getLessonById = async (req, res) => {
     if (getIsConnected()) {
       lesson = await Lesson.findById(id);
     } else {
+      if (IS_PRODUCTION) return dbUnavailable(res);
       lesson = memoryLessons.find(l => l._id === id);
     }
 
@@ -184,4 +199,3 @@ exports.getLessonById = async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
-

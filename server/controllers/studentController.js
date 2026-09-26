@@ -4,8 +4,17 @@ const bobService = require('../services/bob.service');
 const { getIsConnected } = require('../config/db');
 const { memoryAttempts } = require('./quizController');
 
-// Memory store fallback
-const memoryFlashcards = [
+const IS_PRODUCTION = process.env.NODE_ENV === 'production';
+
+// Helper: return 503 when DB is unavailable in production.
+const dbUnavailable = (res) =>
+  res.status(503).json({
+    success: false,
+    message: 'Service temporarily unavailable. Database connection required in production.'
+  });
+
+// Memory store fallback (development / demo mode only)
+const memoryFlashcards = IS_PRODUCTION ? [] : [
   {
     _id: 'flashcard-demo-1',
     studentId: 'demo-student-1',
@@ -72,15 +81,22 @@ exports.generateFlashcards = async (req, res) => {
         const savedDeck = await Flashcard.create(flashcardData);
         return res.status(201).json({ success: true, deck: savedDeck });
       } catch (dbErr) {
-        console.warn('[Flashcards] DB save failed, using memory fallback:', dbErr.message);
+        console.warn('[Flashcards] DB save failed:', dbErr.message);
+        if (IS_PRODUCTION) return dbUnavailable(res);
       }
     }
 
+    // Development / demo mode fallback only.
+    if (IS_PRODUCTION) return dbUnavailable(res);
     const memDeck = { _id: 'deck-' + Date.now(), ...flashcardData, createdAt: new Date() };
     memoryFlashcards.unshift(memDeck);
     return res.status(201).json({ success: true, deck: memDeck });
   } catch (error) {
     console.error('[Flashcards] Unexpected error:', error.message);
+    // In production, do not fall back to a hardcoded emergency deck.
+    if (IS_PRODUCTION) {
+      return res.status(500).json({ success: false, message: 'Failed to generate flashcards. Please try again.' });
+    }
     const userId = req.user ? (req.user.id || req.user._id) : 'student';
     const emergencyDeck = {
       _id: 'deck-emergency-' + Date.now(),
@@ -106,6 +122,9 @@ exports.getFlashcards = async (req, res) => {
       const decks = await Flashcard.find({ studentId: userId }).sort({ createdAt: -1 });
       return res.json({ success: true, decks });
     }
+
+    // Development / demo mode fallback only.
+    if (IS_PRODUCTION) return dbUnavailable(res);
     const decks = memoryFlashcards.filter(d => String(d.studentId) === String(userId));
     return res.json({ success: true, decks });
   } catch (error) {
@@ -121,7 +140,8 @@ exports.getStudentProgress = async (req, res) => {
     if (getIsConnected()) {
       attempts = await Attempt.find({ studentId }).sort({ createdAt: -1 });
     } else {
-      // Memory store fallback
+      // Development / demo mode fallback only.
+      if (IS_PRODUCTION) return dbUnavailable(res);
       attempts = memoryAttempts.filter(a => String(a.studentId) === String(studentId));
     }
 
@@ -155,6 +175,8 @@ exports.getTeacherAnalytics = async (req, res) => {
     if (getIsConnected()) {
       attempts = await Attempt.find();
     } else {
+      // Development / demo mode fallback only.
+      if (IS_PRODUCTION) return dbUnavailable(res);
       attempts = memoryAttempts;
     }
 

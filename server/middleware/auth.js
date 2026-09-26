@@ -1,7 +1,19 @@
 const jwt = require('jsonwebtoken');
 
-// ponytail: secret fallback if JWT_SECRET env var is not explicitly set
-const JWT_SECRET = process.env.JWT_SECRET || 'eduflow_jwt_secret_key_2026_production_fallback';
+// In production, JWT_SECRET MUST be set explicitly — no fallback allowed.
+// In development, fall back to a local-only demo key.
+let JWT_SECRET;
+if (process.env.NODE_ENV === 'production') {
+  if (!process.env.JWT_SECRET) {
+    throw new Error(
+      '[Auth] CRITICAL: JWT_SECRET environment variable is not set. ' +
+      'The application cannot start in production without a secure JWT secret.'
+    );
+  }
+  JWT_SECRET = process.env.JWT_SECRET;
+} else {
+  JWT_SECRET = process.env.JWT_SECRET || 'eduflow_dev_only_jwt_secret_not_for_production';
+}
 
 const protect = (req, res, next) => {
   let token;
@@ -37,4 +49,3 @@ const requireRole = (...roles) => {
 };
 
 module.exports = { protect, requireRole, JWT_SECRET };
-

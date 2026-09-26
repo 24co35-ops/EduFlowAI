@@ -24,4 +24,7 @@ const attemptSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+attemptSchema.index({ studentId: 1 });
+attemptSchema.index({ quizId: 1 });
+
 module.exports = mongoose.model('Attempt', attemptSchema);

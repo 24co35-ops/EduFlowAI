@@ -3,8 +3,17 @@ const Attempt = require('../models/Attempt');
 const bobService = require('../services/bob.service');
 const { getIsConnected } = require('../config/db');
 
-// Memory store fallback
-const memoryQuizzes = [
+const IS_PRODUCTION = process.env.NODE_ENV === 'production';
+
+// Helper: return 503 when DB is unavailable in production.
+const dbUnavailable = (res) =>
+  res.status(503).json({
+    success: false,
+    message: 'Service temporarily unavailable. Database connection required in production.'
+  });
+
+// Memory store fallback (development / demo mode only)
+const memoryQuizzes = IS_PRODUCTION ? [] : [
   {
     _id: 'quiz-demo-1',
     teacherId: 'demo-teacher-1',
@@ -50,7 +59,7 @@ const memoryQuizzes = [
   }
 ];
 
-const memoryAttempts = [
+const memoryAttempts = IS_PRODUCTION ? [] : [
   {
     _id: 'attempt-demo-1',
     studentId: 'demo-student-1',
@@ -96,6 +105,8 @@ exports.generateQuiz = async (req, res) => {
       return res.status(201).json({ success: true, quiz: newQuiz });
     }
 
+    // Development / demo mode fallback only.
+    if (IS_PRODUCTION) return dbUnavailable(res);
     const memQuiz = { _id: 'quiz-' + Date.now(), ...quizData, createdAt: new Date() };
     memoryQuizzes.unshift(memQuiz);
     return res.status(201).json({ success: true, quiz: memQuiz });
@@ -114,6 +125,9 @@ exports.getQuizzes = async (req, res) => {
       const quizzes = await Quiz.find(filter).sort({ createdAt: -1 });
       return res.json({ success: true, quizzes });
     }
+
+    // Development / demo mode fallback only.
+    if (IS_PRODUCTION) return dbUnavailable(res);
     const quizzes = req.user.role === 'teacher'
       ? memoryQuizzes.filter(q => String(q.teacherId) === String(userId))
       : memoryQuizzes.filter(q => q.status === 'published');
@@ -130,6 +144,7 @@ exports.getQuizById = async (req, res) => {
     if (getIsConnected()) {
       quiz = await Quiz.findById(id);
     } else {
+      if (IS_PRODUCTION) return dbUnavailable(res);
       quiz = memoryQuizzes.find(q => q._id === id);
     }
 
@@ -156,6 +171,7 @@ exports.gradeAttempt = async (req, res) => {
     if (getIsConnected()) {
       quiz = await Quiz.findById(quizId);
     } else {
+      if (IS_PRODUCTION) return dbUnavailable(res);
       quiz = memoryQuizzes.find(q => q._id === quizId);
     }
 
@@ -220,6 +236,8 @@ exports.gradeAttempt = async (req, res) => {
       return res.status(201).json({ success: true, attempt: savedAttempt });
     }
 
+    // Development / demo mode fallback only.
+    if (IS_PRODUCTION) return dbUnavailable(res);
     const memAttempt = { _id: 'attempt-' + Date.now(), ...attemptData, createdAt: new Date() };
     memoryAttempts.unshift(memAttempt);
     return res.status(201).json({ success: true, attempt: memAttempt });
@@ -232,27 +250,37 @@ exports.getAttempts = async (req, res) => {
   try {
     const userId = req.user.id || req.user._id;
 
-    // ponytail: students only receive their own attempts; teachers view class attempts
+    // ponytail: students only receive their own attempts
     if (req.user.role === 'student') {
       if (getIsConnected()) {
         const attempts = await Attempt.find({ studentId: userId }).sort({ createdAt: -1 });
         return res.json({ success: true, attempts });
       }
+      if (IS_PRODUCTION) return dbUnavailable(res);
       const attempts = memoryAttempts.filter(a => String(a.studentId) === String(userId));
       return res.json({ success: true, attempts });
     }
 
-    // Teacher or admin access
+    // Teacher: only see attempts for quizzes they created (prevents data leakage across teachers).
     if (getIsConnected()) {
-      const attempts = await Attempt.find().sort({ createdAt: -1 });
+      // Fetch the teacher's quiz IDs first, then filter attempts to those quizzes.
+      const teacherQuizIds = await Quiz.find({ teacherId: userId }, '_id').lean();
+      const quizIdStrings = teacherQuizIds.map(q => String(q._id));
+      const attempts = await Attempt.find({ quizId: { $in: quizIdStrings } }).sort({ createdAt: -1 });
       return res.json({ success: true, attempts });
     }
-    return res.json({ success: true, attempts: memoryAttempts });
+
+    // Development / demo mode fallback only.
+    if (IS_PRODUCTION) return dbUnavailable(res);
+    // In-memory: filter attempts to quizzes owned by this teacher.
+    const teacherQuizIds = memoryQuizzes
+      .filter(q => String(q.teacherId) === String(userId))
+      .map(q => String(q._id));
+    const attempts = memoryAttempts.filter(a => teacherQuizIds.includes(String(a.quizId)));
+    return res.json({ success: true, attempts });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
 };
 
 exports.memoryAttempts = memoryAttempts;
-
-

@@ -1,5 +1,7 @@
 const nodemailer = require('nodemailer');
 
+const IS_PRODUCTION = process.env.NODE_ENV === 'production';
+
 let transporter = null;
 
 async function getTransporter() {
@@ -12,8 +14,13 @@ async function getTransporter() {
       secure: Number(process.env.SMTP_PORT) === 465,
       auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS }
     });
+  } else if (IS_PRODUCTION) {
+    // In production, SMTP must be explicitly configured.
+    throw new Error(
+      '[Mailer] CRITICAL: SMTP_HOST is not set. Cannot send emails in production without a configured mail server.'
+    );
   } else {
-    // Demo mode: auto-create a free Ethereal test account
+    // Development / demo mode: auto-create a free Ethereal test account.
     const testAccount = await nodemailer.createTestAccount();
     transporter = nodemailer.createTransport({
       host: 'smtp.ethereal.email',
