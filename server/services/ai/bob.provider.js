@@ -31,6 +31,10 @@ class BobProvider extends BaseAIProvider {
     this.apiUrl = process.env.WATSONX_URL || 'https://us-south.ml.cloud.ibm.com';
     this.apiKey = process.env.IBM_API_KEY || '';
     this.projectId = process.env.WATSONX_PROJECT_ID || '';
+    this.apiVersion = process.env.WATSONX_API_VERSION || '2024-05-31';
+    this.modelText = process.env.WATSONX_MODEL_TEXT || 'ibm/granite-13b-instruct-v2';
+    this.modelChat = process.env.WATSONX_MODEL_CHAT || 'ibm/granite-13b-chat-v2';
+    this.modelMultilingual = process.env.WATSONX_MODEL_MULTILINGUAL || 'ibm/granite-20b-multilingual';
     this.cachedToken = null;
     this.tokenExpiresAt = 0;
   }
@@ -73,7 +77,7 @@ class BobProvider extends BaseAIProvider {
     }
 
     const token = await this.getAccessToken();
-    const endpoint = `${this.apiUrl}/ml/v1/text/generation?version=2024-05-31`;
+    const endpoint = `${this.apiUrl}/ml/v1/text/generation?version=${this.apiVersion}`;
 
     const decodingMethod = parameters.decoding_method || (parameters.temperature ? 'sample' : 'greedy');
     const reqParameters = {
@@ -87,7 +91,7 @@ class BobProvider extends BaseAIProvider {
     const response = await axios.post(
       endpoint,
       {
-        model_id: modelId || 'ibm/granite-13b-instruct-v2',
+        model_id: modelId || this.modelText,
         input: prompt,
         parameters: reqParameters,
         project_id: this.projectId
@@ -107,7 +111,7 @@ class BobProvider extends BaseAIProvider {
   async generateLessonPlan(syllabusText, subject = 'General Science', language = 'en') {
     const prompt = buildLessonPlanPrompt(syllabusText, subject, language);
     const raw = await this.generateText({
-      modelId: 'ibm/granite-13b-instruct-v2',
+      modelId: this.modelText,
       prompt,
       parameters: { max_new_tokens: 1200 }
     });
@@ -120,7 +124,7 @@ class BobProvider extends BaseAIProvider {
   async generateQuiz(topic, difficulty = 'medium', questionCount = 4, grade = 'Class 10') {
     const prompt = buildQuizPrompt(topic, difficulty, questionCount, grade);
     const raw = await this.generateText({
-      modelId: 'ibm/granite-13b-instruct-v2',
+      modelId: this.modelText,
       prompt,
       parameters: { max_new_tokens: 1500 }
     });
@@ -133,7 +137,7 @@ class BobProvider extends BaseAIProvider {
   async autoGradeAnswer(question, expectedAnswer, studentAnswer) {
     const prompt = buildGradingPrompt(question, expectedAnswer, studentAnswer);
     const raw = await this.generateText({
-      modelId: 'ibm/granite-13b-instruct-v2',
+      modelId: this.modelText,
       prompt,
       parameters: { max_new_tokens: 400 }
     });
@@ -146,7 +150,7 @@ class BobProvider extends BaseAIProvider {
   async generateFlashcards(chapterText, title = 'Study Deck') {
     const prompt = buildFlashcardPrompt(chapterText, title);
     const raw = await this.generateText({
-      modelId: 'ibm/granite-13b-instruct-v2',
+      modelId: this.modelText,
       prompt,
       parameters: { max_new_tokens: 1000 }
     });
@@ -159,7 +163,7 @@ class BobProvider extends BaseAIProvider {
   async solveDoubt(message, history = [], syllabusScope = 'Class 10 Science') {
     const prompt = buildDoubtPrompt(message, history, syllabusScope);
     const raw = await this.generateText({
-      modelId: 'ibm/granite-13b-chat-v2',
+      modelId: this.modelChat,
       prompt,
       parameters: { max_new_tokens: 600, temperature: 0.6 }
     });
@@ -170,7 +174,7 @@ class BobProvider extends BaseAIProvider {
   async generateRemediation(topic, studentScore = 50, weakSubtopics = []) {
     const prompt = buildRemediationPrompt(topic, studentScore, weakSubtopics);
     const raw = await this.generateText({
-      modelId: 'ibm/granite-13b-instruct-v2',
+      modelId: this.modelText,
       prompt,
       parameters: { max_new_tokens: 1200 }
     });
@@ -183,7 +187,7 @@ class BobProvider extends BaseAIProvider {
   async translateText(text, targetLang = 'hi') {
     const prompt = buildTranslationPrompt(text, targetLang);
     const raw = await this.generateText({
-      modelId: 'ibm/granite-20b-multilingual',
+      modelId: this.modelMultilingual,
       prompt,
       parameters: { max_new_tokens: 1200 }
     });

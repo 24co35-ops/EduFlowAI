@@ -165,10 +165,12 @@ class AIService {
       primaryProvider: 'IBM BOB (watsonx.ai Granite)',
       ibmBobConnected: this.isBobConfigured(),
       geminiConfigured: this.isFallbackConfigured(),
+      ragEngine: 'ready',
       activeModels: {
-        instruct: 'ibm/granite-13b-instruct-v2',
-        chat: 'ibm/granite-13b-chat-v2',
-        multilingual: 'ibm/granite-20b-multilingual'
+        instruct: this.bob.modelText,
+        chat: this.bob.modelChat,
+        multilingual: this.bob.modelMultilingual,
+        apiVersion: this.bob.apiVersion
       },
       metrics
     };
