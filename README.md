@@ -81,10 +81,10 @@ EduFlow AI utilizes real IBM watsonx.ai Granite models via a modular provider la
 ## 5. Technology Stack
 
 - **Frontend:** React 18, Vite 5, Tailwind CSS 3.4, Lucide Icons, Axios, React Router 6
-- **Backend:** Node.js, Express 4, Mongoose 8, Multer, pdf-parse, Helmet, express-rate-limit, express-mongo-sanitize
-- **Authentication:** Bcryptjs (10 rounds), JSON Web Tokens (7d TTL)
+- **Backend:** Node.js, Express 4, @supabase/supabase-js, Multer, pdf-parse, Helmet, express-rate-limit, express-mongo-sanitize
+- **Authentication:** Supabase Auth (email/password) + JSON Web Tokens (7d TTL)
 - **AI Infrastructure:** IBM Cloud watsonx.ai (Granite 13B & 20B) with Google Gemini / Curriculum Smart Engine fallback
-- **Database:** MongoDB Atlas / In-Memory dual-mode store
+- **Database:** Supabase Postgres (with in-memory demo fallback when unconfigured)
 - **Deployment:** Vercel Serverless
 
 ---
@@ -94,8 +94,18 @@ EduFlow AI utilizes real IBM watsonx.ai Granite models via a modular provider la
 ### Prerequisites
 - Node.js >= 18.0.0
 - npm >= 9.0.0
+- A free [Supabase](https://supabase.com) project (for persistent auth & data)
 
-### Setup
+### Supabase Setup (one-time)
+
+1. Create a project at [supabase.com](https://supabase.com).
+2. In your project dashboard go to **SQL Editor → New query**, paste the contents of [`supabase/migrations/001_profiles.sql`](supabase/migrations/001_profiles.sql) and run it.
+3. Go to **Project Settings → API** and copy:
+   - **Project URL** → `SUPABASE_URL`
+   - **service_role secret** → `SUPABASE_SERVICE_ROLE_KEY`
+   - **JWT Secret** (Settings → API → JWT Settings) → `JWT_SECRET`
+
+### Local Setup
 ```bash
 # 1. Clone the repository
 git clone https://github.com/24co35-ops/EduFlowAI.git
@@ -106,12 +116,16 @@ npm run install:all
 
 # 3. Configure environment
 cp .env.example .env
+# Edit .env and fill in SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, JWT_SECRET
 
 # 4. Start full-stack development server
 npm run dev
 ```
 - Client runs at: `http://localhost:5173`
 - Server runs at: `http://localhost:5000`
+
+> **No Supabase?** The app runs in in-memory demo mode. Pre-seeded accounts work. New registrations persist for the server lifetime only.
+
 
 ---
 

@@ -4,7 +4,7 @@ const helmet = require('helmet');
 const mongoSanitize = require('express-mongo-sanitize');
 const rateLimit = require('express-rate-limit');
 const dotenv = require('dotenv');
-const { connectDB, getIsConnected } = require('./config/db');
+const { isSupabaseConfigured } = require('./config/supabase');
 const bobService = require('./services/bob.service');
 const aiService = require('./services/ai');
 
@@ -39,8 +39,7 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 // Strip $ and . from request bodies to prevent NoSQL injection
 app.use(mongoSanitize());
 
-// Connect to MongoDB
-connectDB();
+// ponytail: Supabase client is initialized on require; no explicit connect step needed
 
 // Trust proxy for rate limiting (Vercel / Cloudflare / Nginx)
 app.set('trust proxy', 1);
@@ -68,7 +67,8 @@ app.get(['/api/health', '/health'], (req, res) => {
   const payload = {
     status: 'online',
     appName: 'EduFlow AI Enterprise Backend',
-    databaseConnected: getIsConnected(),
+    databaseConnected: isSupabaseConfigured(),
+    databaseProvider: 'Supabase Postgres',
     timestamp: new Date().toISOString(),
     primaryProvider: 'IBM BOB (watsonx.ai Granite 13B & 20B)',
     ibmBobConfigured: bobService.isConfigured()
@@ -102,7 +102,7 @@ if (require.main === module && process.env.VERCEL !== '1') {
     console.log(`🚀 EduFlow AI Backend Server running on port ${PORT}`);
     console.log(`⚡ IBM BOB watsonx.ai Engine: ${bobService.isConfigured() ? 'LIVE API KEY CONNECTED' : 'OFFLINE DEMO / SMART FALLBACK ACTIVE'}`);
     console.log(`⚡ Models: Granite 13B (Instruct/Chat) & Granite 20B (Multilingual)`);
-    console.log(`⚡ Database: ${getIsConnected() ? 'MongoDB Connected' : 'In-Memory Demo Mode'}`);
+    console.log(`⚡ Database: ${isSupabaseConfigured() ? 'Supabase Postgres Connected' : 'In-Memory Demo Mode'}`);
     console.log(`==================================================`);
   });
 }

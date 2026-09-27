@@ -1,25 +1,20 @@
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
-const User = require('../models/User');
-const { getIsConnected } = require('../config/db');
+const { supabase, isSupabaseConfigured } = require('../config/supabase');
 const { JWT_SECRET } = require('../middleware/auth');
 const { sendResetEmail } = require('../utils/mailer');
 
 const IS_PRODUCTION = process.env.NODE_ENV === 'production';
-
-// In-memory reset token store for demo mode (when MongoDB is not connected, dev only)
-// Map<token, { email, expiry }>
-const memResetTokens = new Map();
-
-// ponytail: email regex standard validation
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-// Memory store fallback — only used in development / demo mode (never in production).
-// Demo credentials: teacher@eduflow.ai / teacher123 | student@eduflow.ai / student123
+// ---------------------------------------------------------------------------
+// In-memory fallback — dev/demo only (never reached in production when
+// Supabase is configured).
+// ---------------------------------------------------------------------------
 const memoryUsers = IS_PRODUCTION ? [] : [
   {
-    _id: 'demo-teacher-1',
+    id: 'demo-teacher-1',
     name: 'Anita Sharma',
     email: 'teacher@eduflow.ai',
     passwordHash: bcrypt.hashSync('teacher123', 10),
@@ -28,7 +23,7 @@ const memoryUsers = IS_PRODUCTION ? [] : [
     grade: 'Class 10'
   },
   {
-    _id: 'demo-student-1',
+    id: 'demo-student-1',
     name: 'Rohan Gupta',
     email: 'student@eduflow.ai',
     passwordHash: bcrypt.hashSync('student123', 10),
@@ -38,78 +33,112 @@ const memoryUsers = IS_PRODUCTION ? [] : [
   }
 ];
 
-// Helper: return 503 when DB is unavailable in production.
+const memResetTokens = new Map();
+
 const dbUnavailable = (res) =>
   res.status(503).json({
     success: false,
-    message: 'Service temporarily unavailable. Database connection required in production.'
+    message: 'Service temporarily unavailable. Please configure SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY.'
   });
 
-const generateToken = (user) => {
-  return jwt.sign(
-    { id: user._id || user.id, email: user.email, role: user.role, name: user.name },
+// ponytail: one token shape for both Supabase and memory users
+const generateToken = (user) =>
+  jwt.sign(
+    { id: user.id, email: user.email, role: user.role, name: user.name },
     JWT_SECRET,
     { expiresIn: '7d' }
   );
-};
 
+const safeUserPayload = (user) => ({
+  id: user.id,
+  name: user.name || user.full_name,
+  email: user.email,
+  role: user.role,
+  institution: user.institution || user.school,
+  grade: user.grade
+});
+
+// ---------------------------------------------------------------------------
+// REGISTER
+// ---------------------------------------------------------------------------
 exports.register = async (req, res) => {
   try {
     const { name, email, password, role, institution, grade } = req.body;
+
     if (!name || !email || !password) {
-      return res.status(400).json({ success: false, message: 'Name, email, and password are required' });
+      return res.status(400).json({ success: false, message: 'Name, email, and password are required.' });
     }
+
     const cleanEmail = String(email).trim().toLowerCase();
+
     if (!EMAIL_REGEX.test(cleanEmail)) {
-      return res.status(400).json({ success: false, message: 'Invalid email address format' });
+      return res.status(400).json({ success: false, message: 'Invalid email address format.' });
     }
-    if (password.length < 8) {
-      return res.status(400).json({ success: false, message: 'Password must be at least 8 characters long' });
+
+    if (password.length < 6) {
+      return res.status(400).json({ success: false, message: 'Password must be at least 6 characters long.' });
     }
 
     const assignedRole = role === 'student' ? 'student' : 'teacher';
-    const passwordHash = await bcrypt.hash(password, 10);
 
-    if (getIsConnected()) {
-      const existing = await User.findOne({ email: cleanEmail });
-      if (existing) {
-        return res.status(400).json({ success: false, message: 'User with this email already exists' });
-      }
-
-      const newUser = await User.create({
-        name: name.trim(),
+    // ---- Supabase path ----
+    if (isSupabaseConfigured()) {
+      // 1. Create auth user
+      const { data: authData, error: signUpError } = await supabase.auth.admin.createUser({
         email: cleanEmail,
-        passwordHash,
-        role: assignedRole,
-        institution: institution || 'EduFlow Academy',
-        grade: grade || 'Class 10'
-      });
-
-      const token = generateToken(newUser);
-      return res.status(201).json({
-        success: true,
-        token,
-        user: {
-          id: newUser._id,
-          name: newUser.name,
-          email: newUser.email,
-          role: newUser.role,
-          institution: newUser.institution,
-          grade: newUser.grade
+        password,
+        email_confirm: true, // skip email confirmation for hackathon demo
+        user_metadata: {
+          full_name: name.trim(),
+          role: assignedRole,
+          institution: institution || 'EduFlow Academy',
+          grade: grade || 'Class 10'
         }
       });
+
+      if (signUpError) {
+        // Surface real Supabase error messages to the frontend
+        const msg = signUpError.message || 'Registration failed.';
+        const isDuplicate = msg.toLowerCase().includes('already') || msg.toLowerCase().includes('duplicate') || signUpError.status === 422;
+        return res.status(isDuplicate ? 400 : 500).json({ success: false, message: isDuplicate ? 'An account with that email already exists.' : msg });
+      }
+
+      const userId = authData.user.id;
+
+      // 2. Upsert into profiles table
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .upsert({
+          id: userId,
+          email: cleanEmail,
+          full_name: name.trim(),
+          role: assignedRole,
+          institution: institution || 'EduFlow Academy',
+          grade: grade || 'Class 10'
+        }, { onConflict: 'id' });
+
+      if (profileError) {
+        console.error('[Register] Profile upsert error:', profileError.message);
+        // Non-fatal — auth user is created; profile sync can be repaired later
+      }
+
+      const newUser = { id: userId, name: name.trim(), email: cleanEmail, role: assignedRole, institution: institution || 'EduFlow Academy', grade: grade || 'Class 10' };
+      const token = generateToken(newUser);
+
+      return res.status(201).json({ success: true, token, user: safeUserPayload(newUser) });
     }
 
-    // In-memory fallback — development / demo mode only.
+    // ---- In-memory fallback ----
     if (IS_PRODUCTION) return dbUnavailable(res);
 
-    const existingMem = memoryUsers.find(u => u.email.toLowerCase() === cleanEmail);
+    const existingMem = memoryUsers.find(u => u.email === cleanEmail);
     if (existingMem) {
-      return res.status(400).json({ success: false, message: 'User already exists in demo storage' });
+      return res.status(400).json({ success: false, message: 'An account with that email already exists.' });
     }
 
+    const passwordHash = await bcrypt.hash(password, 10);
     const newMemUser = {
-      _id: 'user-' + Date.now(),
+      id: 'user-' + Date.now(),
       name: name.trim(),
       email: cleanEmail,
       passwordHash,
@@ -120,138 +149,150 @@ exports.register = async (req, res) => {
     memoryUsers.push(newMemUser);
 
     const token = generateToken(newMemUser);
-    return res.status(201).json({
-      success: true,
-      token,
-      user: {
-        id: newMemUser._id,
-        name: newMemUser.name,
-        email: newMemUser.email,
-        role: newMemUser.role,
-        institution: newMemUser.institution,
-        grade: newMemUser.grade
-      }
-    });
+    return res.status(201).json({ success: true, token, user: safeUserPayload(newMemUser) });
+
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    console.error('[Register] Unexpected error:', error.message);
+    res.status(500).json({ success: false, message: error.message || 'Registration failed. Please try again.' });
   }
 };
 
+// ---------------------------------------------------------------------------
+// LOGIN
+// ---------------------------------------------------------------------------
 exports.login = async (req, res) => {
   try {
     const { email, password } = req.body;
     if (!email || !password) {
-      return res.status(400).json({ success: false, message: 'Email and password are required' });
+      return res.status(400).json({ success: false, message: 'Email and password are required.' });
     }
 
     const cleanEmail = String(email).trim().toLowerCase();
-    let foundUser = null;
 
-    if (getIsConnected()) {
-      foundUser = await User.findOne({ email: cleanEmail });
-    } else {
-      // In-memory lookup only in development / demo mode.
-      if (IS_PRODUCTION) return dbUnavailable(res);
-      foundUser = memoryUsers.find(u => u.email.toLowerCase() === cleanEmail);
+    // ---- Supabase path ----
+    if (isSupabaseConfigured()) {
+      const { data: authData, error: signInError } = await supabase.auth.signInWithPassword({
+        email: cleanEmail,
+        password
+      });
+
+      if (signInError) {
+        return res.status(401).json({ success: false, message: 'Invalid email or password.' });
+      }
+
+      // Fetch profile for role/name/institution
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('full_name, role, institution, grade')
+        .eq('id', authData.user.id)
+        .single();
+
+      const user = {
+        id: authData.user.id,
+        name: profile?.full_name || authData.user.user_metadata?.full_name || cleanEmail,
+        email: cleanEmail,
+        role: profile?.role || authData.user.user_metadata?.role || 'teacher',
+        institution: profile?.institution || authData.user.user_metadata?.institution || 'EduFlow Academy',
+        grade: profile?.grade || authData.user.user_metadata?.grade || 'Class 10'
+      };
+
+      const token = generateToken(user);
+      return res.json({ success: true, token, user: safeUserPayload(user) });
     }
 
+    // ---- In-memory fallback ----
+    if (IS_PRODUCTION) return dbUnavailable(res);
+
+    const foundUser = memoryUsers.find(u => u.email === cleanEmail);
     if (!foundUser) {
-      return res.status(401).json({ success: false, message: 'Invalid credentials' });
+      return res.status(401).json({ success: false, message: 'Invalid email or password.' });
     }
 
     const isMatch = await bcrypt.compare(password, foundUser.passwordHash);
     if (!isMatch) {
-      return res.status(401).json({ success: false, message: 'Invalid credentials' });
+      return res.status(401).json({ success: false, message: 'Invalid email or password.' });
     }
 
     const token = generateToken(foundUser);
-    return res.json({
-      success: true,
-      token,
-      user: {
-        id: foundUser._id || foundUser.id,
-        name: foundUser.name,
-        email: foundUser.email,
-        role: foundUser.role,
-        institution: foundUser.institution,
-        grade: foundUser.grade
-      }
-    });
+    return res.json({ success: true, token, user: safeUserPayload(foundUser) });
+
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    console.error('[Login] Unexpected error:', error.message);
+    res.status(500).json({ success: false, message: error.message || 'Login failed. Please try again.' });
   }
 };
 
+// ---------------------------------------------------------------------------
+// GET ME
+// ---------------------------------------------------------------------------
 exports.getMe = async (req, res) => {
-  res.json({
-    success: true,
-    user: req.user
-  });
+  // req.user is already decoded from JWT by protect middleware
+  res.json({ success: true, user: req.user });
 };
 
+// ---------------------------------------------------------------------------
+// FORGOT PASSWORD
+// ---------------------------------------------------------------------------
 exports.forgotPassword = async (req, res) => {
   try {
     const { email } = req.body;
-    if (!email) return res.status(400).json({ success: false, message: 'Email is required' });
+    if (!email) return res.status(400).json({ success: false, message: 'Email is required.' });
 
     const cleanEmail = String(email).trim().toLowerCase();
-    const token = crypto.randomBytes(32).toString('hex');
-    const expiry = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
-    const resetUrl = `${process.env.CLIENT_URL || 'http://localhost:5173'}/reset-password/${token}`;
 
-    if (getIsConnected()) {
-      const user = await User.findOne({ email: cleanEmail });
-      if (user) {
-        user.resetToken = token;
-        user.resetTokenExpiry = expiry;
-        await user.save();
-        await sendResetEmail(cleanEmail, resetUrl);
-      }
-    } else {
-      if (IS_PRODUCTION) return dbUnavailable(res);
-      const memUser = memoryUsers.find(u => u.email === cleanEmail);
-      if (memUser) {
-        memResetTokens.set(token, { email: cleanEmail, expiry });
-        await sendResetEmail(cleanEmail, resetUrl);
-      }
+    if (isSupabaseConfigured()) {
+      // Supabase handles the reset email internally
+      await supabase.auth.admin.generateLink({
+        type: 'recovery',
+        email: cleanEmail,
+        options: { redirectTo: `${process.env.CLIENT_URL || 'http://localhost:5173'}/reset-password` }
+      });
+      // Always return success (user enumeration protection)
+      return res.json({ success: true, message: 'If that email exists, a reset link has been sent.' });
     }
 
-    // Always return success to avoid user enumeration
+    // ---- In-memory fallback ----
+    if (IS_PRODUCTION) return dbUnavailable(res);
+
+    const memUser = memoryUsers.find(u => u.email === cleanEmail);
+    if (memUser) {
+      const token = crypto.randomBytes(32).toString('hex');
+      const expiry = new Date(Date.now() + 60 * 60 * 1000);
+      memResetTokens.set(token, { email: cleanEmail, expiry });
+      const resetUrl = `${process.env.CLIENT_URL || 'http://localhost:5173'}/reset-password/${token}`;
+      await sendResetEmail(cleanEmail, resetUrl);
+    }
+
     return res.json({ success: true, message: 'If that email exists, a reset link has been sent.' });
   } catch (error) {
+    console.error('[ForgotPassword] Error:', error.message);
     res.status(500).json({ success: false, message: error.message });
   }
 };
 
+// ---------------------------------------------------------------------------
+// RESET PASSWORD
+// ---------------------------------------------------------------------------
 exports.resetPassword = async (req, res) => {
   try {
     const { token } = req.params;
     const { password } = req.body;
-    if (!password || password.length < 8) {
-      return res.status(400).json({ success: false, message: 'Password must be at least 8 characters' });
+
+    if (!password || password.length < 6) {
+      return res.status(400).json({ success: false, message: 'Password must be at least 6 characters.' });
     }
 
-    const passwordHash = await bcrypt.hash(password, 10);
-
-    if (getIsConnected()) {
-      const user = await User.findOne({
-        resetToken: token,
-        resetTokenExpiry: { $gt: new Date() }
-      });
-      if (!user) return res.status(400).json({ success: false, message: 'Reset link is invalid or has expired' });
-      user.passwordHash = passwordHash;
-      user.resetToken = null;
-      user.resetTokenExpiry = null;
-      await user.save();
-    } else {
+    // ---- In-memory fallback only (Supabase reset is handled client-side via magic link) ----
+    if (!isSupabaseConfigured()) {
       if (IS_PRODUCTION) return dbUnavailable(res);
+
       const entry = memResetTokens.get(token);
       if (!entry || entry.expiry < new Date()) {
-        return res.status(400).json({ success: false, message: 'Reset link is invalid or has expired' });
+        return res.status(400).json({ success: false, message: 'Reset link is invalid or has expired.' });
       }
       const memUser = memoryUsers.find(u => u.email === entry.email);
-      if (!memUser) return res.status(400).json({ success: false, message: 'User not found' });
-      memUser.passwordHash = passwordHash;
+      if (!memUser) return res.status(400).json({ success: false, message: 'User not found.' });
+      memUser.passwordHash = await bcrypt.hash(password, 10);
       memResetTokens.delete(token);
     }
 

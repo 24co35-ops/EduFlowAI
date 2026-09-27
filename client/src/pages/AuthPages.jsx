@@ -165,10 +165,8 @@ export function RegisterPage({ setUser }) {
 
   const handleRegister = async (e) => {
     e.preventDefault();
-    if (password.length < 6) {
-      setError('Password must be at least 6 characters long.');
-      return;
-    }
+    if (!name.trim()) { setError('Full name is required.'); return; }
+    if (password.length < 6) { setError('Password must be at least 6 characters long.'); return; }
     setLoading(true);
     setError('');
     try {
@@ -177,14 +175,18 @@ export function RegisterPage({ setUser }) {
         localStorage.setItem('eduflow_token', res.data.token);
         localStorage.setItem('eduflow_user', JSON.stringify(res.data.user));
         setUser(res.data.user);
-        navigate('/');
+        navigate(res.data.user.role === 'student' ? '/student' : '/');
+      } else {
+        setError(res.data.message || 'Registration failed. Please try again.');
       }
     } catch (err) {
-      setError(err.response?.data?.message || 'Registration failed.');
+      const msg = err.response?.data?.message;
+      setError(msg || (err.message === 'Network Error' ? 'Cannot reach server. Please check your connection.' : 'Registration failed. Please try again.'));
     } finally {
       setLoading(false);
     }
   };
+
 
   return (
     <div className="min-h-[85vh] flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
