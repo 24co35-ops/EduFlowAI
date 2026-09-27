@@ -1,10 +1,8 @@
 /**
- * IBM BOB (watsonx.ai) Real Provider Implementation
- * 
- * Target Models:
- * - ibm/granite-13b-instruct-v2 (Curriculum structuring, Quiz synthesis, Flashcards, Auto-grading, Remediation)
- * - ibm/granite-13b-chat-v2 (Doubt solver chat)
- * - ibm/granite-20b-multilingual (Multilingual localization)
+ * IBM Granite Provider — via Hugging Face Inference API (free tier, no IBM Cloud account needed)
+ *
+ * Model: ibm-granite/granite-3.3-8b-instruct (or any ibm-granite/* instruct model)
+ * Endpoint: https://router.huggingface.co/v1/chat/completions  (OpenAI-compatible)
  */
 
 const axios = require('axios');
@@ -25,96 +23,48 @@ const {
   validateRemediation
 } = require('./validators/outputValidator');
 
+const HF_ENDPOINT = 'https://router.huggingface.co/v1/chat/completions';
+
 class BobProvider extends BaseAIProvider {
   constructor() {
     super('ibm_bob');
-    this.apiUrl = process.env.WATSONX_URL || 'https://us-south.ml.cloud.ibm.com';
-    this.apiKey = process.env.IBM_API_KEY || '';
-    this.projectId = process.env.WATSONX_PROJECT_ID || '';
-    this.apiVersion = process.env.WATSONX_API_VERSION || '2024-05-31';
-    this.modelText = process.env.WATSONX_MODEL_TEXT || 'ibm/granite-13b-instruct-v2';
-    this.modelChat = process.env.WATSONX_MODEL_CHAT || 'ibm/granite-13b-chat-v2';
-    this.modelMultilingual = process.env.WATSONX_MODEL_MULTILINGUAL || 'ibm/granite-20b-multilingual';
-    this.cachedToken = null;
-    this.tokenExpiresAt = 0;
+    this.hfToken = process.env.HF_API_TOKEN || '';
+    this.hfModel = process.env.HF_GRANITE_MODEL || 'ibm-granite/granite-3.3-8b-instruct';
   }
 
   isConfigured() {
-    return Boolean(this.apiKey && this.apiKey.trim().length > 10 && this.projectId);
+    return Boolean(this.hfToken && this.hfToken.trim().length > 10);
   }
 
   /**
-   * Securely exchanges IBM Cloud API Key for an IAM OAuth 2.0 access token (cached for 50 mins).
+   * Send a prompt to IBM Granite via HF's OpenAI-compatible chat completions router.
+   * Returns the generated text string, or null on any failure.
    */
-  async getAccessToken() {
-    if (this.cachedToken && Date.now() < this.tokenExpiresAt) {
-      return this.cachedToken;
-    }
-
-    const res = await axios.post(
-      'https://iam.cloud.ibm.com/identity/token',
-      new URLSearchParams({
-        grant_type: 'urn:ibm:params:oauth:grant-type:apikey',
-        apikey: this.apiKey
-      }),
-      {
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        timeout: 10000
-      }
-    );
-
-    this.cachedToken = res.data.access_token;
-    this.tokenExpiresAt = Date.now() + 3000 * 1000; // 50 mins
-    return this.cachedToken;
-  }
-
-  /**
-   * Centralized IBM watsonx.ai Text Generation execution
-   */
-  async generateText({ modelId, prompt, parameters = {} }) {
-    if (!this.isConfigured()) {
-      return null;
-    }
-
-    const token = await this.getAccessToken();
-    const endpoint = `${this.apiUrl}/ml/v1/text/generation?version=${this.apiVersion}`;
-
-    const decodingMethod = parameters.decoding_method || (parameters.temperature ? 'sample' : 'greedy');
-    const reqParameters = {
-      max_new_tokens: parameters.max_new_tokens || 1000,
-      decoding_method: decodingMethod
-    };
-    if (decodingMethod === 'sample' && parameters.temperature) {
-      reqParameters.temperature = parameters.temperature;
-    }
+  async generateText({ prompt, maxTokens = 800 }) {
+    if (!this.isConfigured()) return null;
 
     const response = await axios.post(
-      endpoint,
+      HF_ENDPOINT,
       {
-        model_id: modelId || this.modelText,
-        input: prompt,
-        parameters: reqParameters,
-        project_id: this.projectId
+        model: this.hfModel,
+        messages: [{ role: 'user', content: prompt }],
+        max_tokens: maxTokens
       },
       {
         headers: {
-          Authorization: `Bearer ${token}`,
+          Authorization: `Bearer ${this.hfToken}`,
           'Content-Type': 'application/json'
         },
         timeout: 15000
       }
     );
 
-    return response.data?.results?.[0]?.generated_text || null;
+    return response.data?.choices?.[0]?.message?.content || null;
   }
 
   async generateLessonPlan(syllabusText, subject = 'General Science', language = 'en') {
     const prompt = buildLessonPlanPrompt(syllabusText, subject, language);
-    const raw = await this.generateText({
-      modelId: this.modelText,
-      prompt,
-      parameters: { max_new_tokens: 1200 }
-    });
+    const raw = await this.generateText({ prompt, maxTokens: 1200 });
 
     if (!raw) return null;
     const parsed = safeExtractJson(raw);
@@ -123,11 +73,7 @@ class BobProvider extends BaseAIProvider {
 
   async generateQuiz(topic, difficulty = 'medium', questionCount = 4, grade = 'Class 10') {
     const prompt = buildQuizPrompt(topic, difficulty, questionCount, grade);
-    const raw = await this.generateText({
-      modelId: this.modelText,
-      prompt,
-      parameters: { max_new_tokens: 1500 }
-    });
+    const raw = await this.generateText({ prompt, maxTokens: 1500 });
 
     if (!raw) return null;
     const parsed = safeExtractJson(raw);
@@ -136,11 +82,7 @@ class BobProvider extends BaseAIProvider {
 
   async autoGradeAnswer(question, expectedAnswer, studentAnswer) {
     const prompt = buildGradingPrompt(question, expectedAnswer, studentAnswer);
-    const raw = await this.generateText({
-      modelId: this.modelText,
-      prompt,
-      parameters: { max_new_tokens: 400 }
-    });
+    const raw = await this.generateText({ prompt, maxTokens: 400 });
 
     if (!raw) return null;
     const parsed = safeExtractJson(raw);
@@ -149,11 +91,7 @@ class BobProvider extends BaseAIProvider {
 
   async generateFlashcards(chapterText, title = 'Study Deck') {
     const prompt = buildFlashcardPrompt(chapterText, title);
-    const raw = await this.generateText({
-      modelId: this.modelText,
-      prompt,
-      parameters: { max_new_tokens: 1000 }
-    });
+    const raw = await this.generateText({ prompt, maxTokens: 1000 });
 
     if (!raw) return null;
     const parsed = safeExtractJson(raw);
@@ -162,22 +100,14 @@ class BobProvider extends BaseAIProvider {
 
   async solveDoubt(message, history = [], syllabusScope = 'Class 10 Science') {
     const prompt = buildDoubtPrompt(message, history, syllabusScope);
-    const raw = await this.generateText({
-      modelId: this.modelChat,
-      prompt,
-      parameters: { max_new_tokens: 600, temperature: 0.6 }
-    });
+    const raw = await this.generateText({ prompt, maxTokens: 600 });
 
     return raw ? raw.trim() : null;
   }
 
   async generateRemediation(topic, studentScore = 50, weakSubtopics = []) {
     const prompt = buildRemediationPrompt(topic, studentScore, weakSubtopics);
-    const raw = await this.generateText({
-      modelId: this.modelText,
-      prompt,
-      parameters: { max_new_tokens: 1200 }
-    });
+    const raw = await this.generateText({ prompt, maxTokens: 1200 });
 
     if (!raw) return null;
     const parsed = safeExtractJson(raw);
@@ -186,11 +116,7 @@ class BobProvider extends BaseAIProvider {
 
   async translateText(text, targetLang = 'hi') {
     const prompt = buildTranslationPrompt(text, targetLang);
-    const raw = await this.generateText({
-      modelId: this.modelMultilingual,
-      prompt,
-      parameters: { max_new_tokens: 1200 }
-    });
+    const raw = await this.generateText({ prompt, maxTokens: 1200 });
 
     return raw ? raw.trim() : null;
   }

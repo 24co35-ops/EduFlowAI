@@ -162,7 +162,7 @@ class AIService {
     const metrics = telemetry.getMetrics();
     return {
       status: 'online',
-      primaryProvider: 'IBM BOB (watsonx.ai Granite)',
+      primaryProvider: 'IBM Granite (via Hugging Face Inference API)',
       ibmBobConnected: this.isBobConfigured(),
       geminiConfigured: this.isFallbackConfigured(),
       ragEngine: 'ready',
