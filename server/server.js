@@ -74,8 +74,10 @@ app.get(['/api/health', '/health'], (req, res) => {
     ibmBobConfigured: bobService.isConfigured()
   };
 
-  // Safe developer & judge diagnostic metrics
-  if (!IS_PRODUCTION || req.query.diagnostics === 'true') {
+  // Diagnostic details (models, telemetry, geminiConfigured) are NEVER exposed in
+  // production — even when ?diagnostics=true is passed — to avoid leaking provider
+  // configuration information to external callers.
+  if (!IS_PRODUCTION) {
     payload.geminiConfigured = Boolean(process.env.GEMINI_API_KEY && process.env.GEMINI_API_KEY.trim().length > 10);
     payload.models = healthInfo.activeModels;
     payload.telemetry = healthInfo.metrics;

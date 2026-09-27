@@ -1,8 +1,9 @@
 const Flashcard = require('../models/Flashcard');
 const Attempt = require('../models/Attempt');
+const Quiz = require('../models/Quiz');
 const bobService = require('../services/bob.service');
 const { getIsConnected } = require('../config/db');
-const { memoryAttempts } = require('./quizController');
+const { memoryAttempts, memoryQuizzes } = require('./quizController');
 
 const IS_PRODUCTION = process.env.NODE_ENV === 'production';
 
@@ -200,12 +201,23 @@ exports.getStudentProgress = async (req, res) => {
 
 exports.getTeacherAnalytics = async (req, res) => {
   try {
+    const teacherId = req.user.id || req.user._id;
     let attempts = [];
+
     if (getIsConnected()) {
-      attempts = await Attempt.find();
+      // Only fetch attempts for quizzes this teacher created
+      const teacherQuizIds = await Quiz.find({ teacherId }, '_id').lean();
+      const quizIdStrings = teacherQuizIds.map(q => String(q._id));
+      attempts = quizIdStrings.length > 0
+        ? await Attempt.find({ quizId: { $in: quizIdStrings } }).sort({ createdAt: -1 })
+        : [];
     } else {
       if (IS_PRODUCTION) return dbUnavailable(res);
-      attempts = memoryAttempts;
+      // Memory fallback: filter attempts to teacher's own quizzes
+      const teacherQuizIds = memoryQuizzes
+        .filter(q => String(q.teacherId) === String(teacherId))
+        .map(q => String(q._id));
+      attempts = memoryAttempts.filter(a => teacherQuizIds.includes(String(a.quizId)));
     }
 
     const totalStudents = new Set(attempts.map(a => a.studentId)).size;
