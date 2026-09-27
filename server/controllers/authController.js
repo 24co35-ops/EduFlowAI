@@ -268,11 +268,24 @@ exports.forgotPassword = async (req, res) => {
     const cleanEmail = String(email).trim().toLowerCase();
 
     if (isSupabaseConfigured()) {
-      const { error } = await supabase.auth.resetPasswordForEmail(cleanEmail, {
-        redirectTo: `${process.env.CLIENT_URL || 'http://localhost:5173'}/reset-password`
+      console.log('[ForgotPassword] Calling generateLink for:', cleanEmail);
+      const { data, error: linkError } = await supabase.auth.admin.generateLink({
+        type: 'recovery',
+        email: cleanEmail,
+        options: { redirectTo: `${process.env.CLIENT_URL || 'http://localhost:5173'}/reset-password` }
       });
-      if (error) {
-        console.error('[ForgotPassword] Supabase resetPasswordForEmail error:', error.message, error);
+      console.log('[ForgotPassword] generateLink result:', JSON.stringify({ data, error: linkError }));
+      if (linkError) {
+        console.error('[ForgotPassword] Supabase generateLink error:', linkError.message, linkError);
+      } else if (data?.properties?.action_link) {
+        const actionLink = data.properties.action_link;
+        console.log('[ForgotPassword] Calling sendResetEmail with link:', actionLink);
+        try {
+          await sendResetEmail(cleanEmail, actionLink);
+          console.log('[ForgotPassword] sendResetEmail completed successfully');
+        } catch (mailErr) {
+          console.error('[ForgotPassword] sendResetEmail failed:', mailErr);
+        }
       }
       return res.json({ success: true, message: 'If that email exists, a reset link has been sent.' });
     }
@@ -322,5 +335,32 @@ exports.resetPassword = async (req, res) => {
   } catch (error) {
     console.error('[ResetPassword] Error:', error.message);
     return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// ---------------------------------------------------------------------------
+// DEBUG EMAIL TEST — TEMPORARY, remove after diagnosing the email issue
+// ---------------------------------------------------------------------------
+exports.debugEmailTest = async (req, res) => {
+  const resendKey = process.env.RESEND_API_KEY;
+  console.log('[DebugEmail] RESEND_API_KEY:', resendKey ? `SET (${resendKey.slice(0, 4)}...)` : 'NOT SET');
+  console.log('[DebugEmail] SMTP_FROM:', process.env.SMTP_FROM || 'NOT SET');
+
+  const to = req.query.to;
+  if (!to) {
+    return res.status(400).json({ success: false, message: 'Pass ?to=your@email.com to test.' });
+  }
+
+  try {
+    await sendResetEmail(to, 'https://example.com/test-reset-link');
+    return res.json({ success: true, message: 'Email sent — check inbox and Resend activity logs.' });
+  } catch (error) {
+    console.error('[DebugEmail] sendResetEmail failed:', error);
+    return res.status(500).json({
+      success: false,
+      error: error.message,
+      name: error.name,
+      stack: error.stack
+    });
   }
 };

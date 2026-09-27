@@ -7,7 +7,19 @@ let transporter = null;
 async function getTransporter() {
   if (transporter) return transporter;
 
-  if (process.env.SMTP_HOST) {
+  const resendKey = process.env.RESEND_API_KEY;
+  console.log('[Mailer] RESEND_API_KEY:', resendKey ? `SET (${resendKey.slice(0, 4)}...)` : 'NOT SET');
+
+  if (resendKey) {
+    // ponytail: Resend via SMTP — no SDK needed, nodemailer already installed
+    console.log('[Mailer] Transport selected: resend');
+    transporter = nodemailer.createTransport({
+      host: 'smtp.resend.com',
+      port: 587,
+      auth: { user: 'resend', pass: resendKey }
+    });
+  } else if (process.env.SMTP_HOST) {
+    console.log('[Mailer] Transport selected: smtp_host');
     transporter = nodemailer.createTransport({
       host: process.env.SMTP_HOST,
       port: Number(process.env.SMTP_PORT) || 587,
@@ -21,6 +33,7 @@ async function getTransporter() {
     );
   } else {
     // Development / demo mode: auto-create a free Ethereal test account.
+    console.log('[Mailer] Transport selected: ethereal');
     const testAccount = await nodemailer.createTestAccount();
     transporter = nodemailer.createTransport({
       host: 'smtp.ethereal.email',
