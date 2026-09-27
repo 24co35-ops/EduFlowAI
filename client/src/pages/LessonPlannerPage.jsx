@@ -11,9 +11,14 @@ import {
   Cpu, 
   ArrowRight,
   Languages,
-  Loader2
+  Loader2,
+  Edit3,
+  Save,
+  Check,
+  Plus,
+  Trash2
 } from 'lucide-react';
-import { generateLessonPlan, translateLessonPlan, getLessons } from '../services/api';
+import { generateLessonPlan, updateLessonPlan, translateLessonPlan, getLessons } from '../services/api';
 
 export default function LessonPlannerPage() {
   const [subject, setSubject] = useState('Class 10 Science & Technology');
@@ -27,14 +32,20 @@ export default function LessonPlannerPage() {
   const [translating, setTranslating] = useState(false);
   const [currentPlan, setCurrentPlan] = useState(null);
   const [translatedText, setTranslatedText] = useState('');
+  
+  // Edit mode state
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedPlan, setEditedPlan] = useState(null);
+  const [saving, setSaving] = useState(false);
+  const [saveSuccess, setSaveSuccess] = useState(false);
 
-  // Sample default initial plan
   useEffect(() => {
     async function loadInitial() {
       try {
         const res = await getLessons();
         if (res.data.lessons && res.data.lessons.length > 0) {
           setCurrentPlan(res.data.lessons[0]);
+          setEditedPlan(JSON.parse(JSON.stringify(res.data.lessons[0])));
         }
       } catch (err) {
         console.warn('Initial lesson fetch error:', err);
@@ -53,6 +64,7 @@ export default function LessonPlannerPage() {
     e.preventDefault();
     setLoading(true);
     setTranslatedText('');
+    setIsEditing(false);
 
     try {
       const formData = new FormData();
@@ -66,6 +78,7 @@ export default function LessonPlannerPage() {
       const res = await generateLessonPlan(formData);
       if (res.data.success) {
         setCurrentPlan(res.data.lesson);
+        setEditedPlan(JSON.parse(JSON.stringify(res.data.lesson)));
       }
     } catch (err) {
       alert('Error generating lesson plan: ' + (err.response?.data?.message || err.message));
@@ -92,6 +105,35 @@ export default function LessonPlannerPage() {
     }
   };
 
+  const handleDayFieldChange = (dayIdx, field, value) => {
+    if (!editedPlan) return;
+    const newPlan = { ...editedPlan };
+    newPlan.plan[dayIdx][field] = value;
+    setEditedPlan(newPlan);
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editedPlan || !editedPlan._id) return;
+    setSaving(true);
+    try {
+      const res = await updateLessonPlan(editedPlan._id, {
+        subject: editedPlan.subject,
+        overview: editedPlan.overview,
+        plan: editedPlan.plan
+      });
+      if (res.data.success) {
+        setCurrentPlan(res.data.lesson);
+        setIsEditing(false);
+        setSaveSuccess(true);
+        setTimeout(() => setSaveSuccess(false), 3000);
+      }
+    } catch (err) {
+      alert('Error saving lesson plan: ' + (err.response?.data?.message || err.message));
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
     <div className="space-y-8">
       
@@ -106,14 +148,51 @@ export default function LessonPlannerPage() {
         </div>
 
         {currentPlan && (
-          <button
-            onClick={() => window.print()}
-            className="px-4 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-slate-200 text-xs font-bold flex items-center gap-2 hover:bg-slate-800 transition-colors self-start"
-          >
-            <Download className="w-4 h-4 text-indigo-400" /> Export Plan (PDF)
-          </button>
+          <div className="flex items-center gap-2 self-start">
+            <button
+              onClick={() => {
+                if (isEditing) {
+                  setEditedPlan(JSON.parse(JSON.stringify(currentPlan)));
+                  setIsEditing(false);
+                } else {
+                  setIsEditing(true);
+                }
+              }}
+              className={`px-3.5 py-2 rounded-xl border text-xs font-bold flex items-center gap-1.5 transition-colors ${
+                isEditing
+                  ? 'bg-amber-500/20 text-amber-300 border-amber-500/30'
+                  : 'bg-slate-900 border-slate-700 text-slate-300 hover:bg-slate-800'
+              }`}
+            >
+              <Edit3 className="w-3.5 h-3.5" /> {isEditing ? 'Cancel Edit' : 'Edit Plan'}
+            </button>
+
+            {isEditing && (
+              <button
+                onClick={handleSaveEdit}
+                disabled={saving}
+                className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold flex items-center gap-1.5 shadow-md transition-all disabled:opacity-50"
+              >
+                {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+                <span>Save Changes</span>
+              </button>
+            )}
+
+            <button
+              onClick={() => window.print()}
+              className="px-4 py-2 rounded-xl bg-slate-900 border border-slate-700 text-slate-200 text-xs font-bold flex items-center gap-2 hover:bg-slate-800 transition-colors"
+            >
+              <Download className="w-4 h-4 text-indigo-400" /> Export PDF
+            </button>
+          </div>
         )}
       </div>
+
+      {saveSuccess && (
+        <div className="p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-bold flex items-center gap-2 animate-fade-in">
+          <Check className="w-4 h-4" /> Lesson plan edits saved successfully!
+        </div>
+      )}
 
       {/* Input Form & Preview Split */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
@@ -194,16 +273,34 @@ export default function LessonPlannerPage() {
               
               {/* Header Info */}
               <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-800 pb-4 gap-3">
-                <div>
+                <div className="space-y-1">
                   <span className="px-2.5 py-0.5 rounded-full bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 text-[10px] font-bold uppercase">
                     Generated Plan
                   </span>
-                  <h2 className="text-xl font-bold text-white font-outfit mt-1">{currentPlan.subject}</h2>
-                  <p className="text-xs text-slate-400 mt-0.5">{currentPlan.overview}</p>
+                  {isEditing ? (
+                    <input
+                      type="text"
+                      value={editedPlan?.subject || ''}
+                      onChange={(e) => setEditedPlan({ ...editedPlan, subject: e.target.value })}
+                      className="text-lg font-bold text-white bg-slate-900 border border-slate-700 px-3 py-1 rounded-xl w-full"
+                    />
+                  ) : (
+                    <h2 className="text-xl font-bold text-white font-outfit">{currentPlan.subject}</h2>
+                  )}
+                  {isEditing ? (
+                    <textarea
+                      rows={2}
+                      value={editedPlan?.overview || ''}
+                      onChange={(e) => setEditedPlan({ ...editedPlan, overview: e.target.value })}
+                      className="text-xs text-slate-300 bg-slate-900 border border-slate-700 px-3 py-1 rounded-xl w-full"
+                    />
+                  ) : (
+                    <p className="text-xs text-slate-400">{currentPlan.overview}</p>
+                  )}
                 </div>
 
                 {/* F3 Translation Selector */}
-                <div className="flex items-center gap-2 bg-slate-900 p-1.5 rounded-xl border border-slate-800 self-start sm:self-auto">
+                <div className="flex items-center gap-2 bg-slate-900 p-1.5 rounded-xl border border-slate-800 self-start sm:self-auto flex-shrink-0">
                   <Globe className="w-4 h-4 text-indigo-400 ml-1" />
                   <select
                     value={targetLang}
@@ -214,7 +311,7 @@ export default function LessonPlannerPage() {
                     <option value="mr">Marathi (मराठी)</option>
                     <option value="ta">Tamil (தமிழ்)</option>
                     <option value="te">Telugu (తెలుగు)</option>
-                    <option value="kn">Kannada (कन्नड)</option>
+                    <option value="kn">Kannada (ಕನ್ನಡ)</option>
                   </select>
                   <button
                     onClick={handleTranslate}
@@ -230,7 +327,7 @@ export default function LessonPlannerPage() {
               {translatedText && (
                 <div className="p-4 rounded-2xl bg-indigo-950/40 border border-indigo-500/30 space-y-2">
                   <div className="flex items-center gap-2 text-xs font-bold text-indigo-300">
-                    <Languages className="w-4 h-4" /> IBM BOB Multilingual Translation Output
+                    <Languages className="w-4 h-4" /> IBM Granite 20B Multilingual Output
                   </div>
                   <pre className="text-xs text-slate-200 whitespace-pre-wrap font-sans bg-slate-900/80 p-3 rounded-xl border border-slate-800">
                     {translatedText}
@@ -240,19 +337,38 @@ export default function LessonPlannerPage() {
 
               {/* Day-by-Day Cards */}
               <div className="space-y-4">
-                {currentPlan.plan?.map((dayItem) => (
-                  <div key={dayItem.day} className="p-5 rounded-2xl bg-slate-900/80 border border-slate-800 space-y-3 hover:border-slate-700 transition-colors">
+                {(isEditing ? editedPlan?.plan : currentPlan.plan)?.map((dayItem, dayIdx) => (
+                  <div key={dayItem.day || dayIdx} className="p-5 rounded-2xl bg-slate-900/80 border border-slate-800 space-y-3 hover:border-slate-700 transition-colors">
                     
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-xl bg-indigo-600/20 text-indigo-400 font-extrabold text-xs flex items-center justify-center border border-indigo-500/30">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-3 flex-1">
+                        <div className="w-8 h-8 rounded-xl bg-indigo-600/20 text-indigo-400 font-extrabold text-xs flex items-center justify-center border border-indigo-500/30 flex-shrink-0">
                           D{dayItem.day}
                         </div>
-                        <h4 className="text-sm font-bold text-white">{dayItem.topic}</h4>
+                        {isEditing ? (
+                          <input
+                            type="text"
+                            value={dayItem.topic}
+                            onChange={(e) => handleDayFieldChange(dayIdx, 'topic', e.target.value)}
+                            className="text-sm font-bold text-white bg-slate-950 border border-slate-700 px-3 py-1 rounded-xl flex-1"
+                          />
+                        ) : (
+                          <h4 className="text-sm font-bold text-white">{dayItem.topic}</h4>
+                        )}
                       </div>
-                      <div className="flex items-center gap-1.5 text-[11px] font-semibold text-slate-400 bg-slate-800 px-2.5 py-1 rounded-lg">
-                        <Clock className="w-3.5 h-3.5 text-indigo-400" /> {dayItem.duration}
-                      </div>
+
+                      {isEditing ? (
+                        <input
+                          type="text"
+                          value={dayItem.duration}
+                          onChange={(e) => handleDayFieldChange(dayIdx, 'duration', e.target.value)}
+                          className="w-24 text-xs font-semibold text-slate-300 bg-slate-950 border border-slate-700 px-2 py-1 rounded-xl"
+                        />
+                      ) : (
+                        <div className="flex items-center gap-1.5 text-[11px] font-semibold text-slate-400 bg-slate-800 px-2.5 py-1 rounded-lg flex-shrink-0">
+                          <Clock className="w-3.5 h-3.5 text-indigo-400" /> {dayItem.duration}
+                        </div>
+                      )}
                     </div>
 
                     {/* Objectives */}

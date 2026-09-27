@@ -1,226 +1,169 @@
-# 🎓 EduFlow AI
+# EduFlow AI — Intelligent Course-Content Automation & Learning Intelligence Platform
 
-> **Intelligent Course Content Automation powered by IBM BOB (watsonx.ai)**  
-> Built for the IBM Hackathon 2026
-
-[![IBM watsonx](https://img.shields.io/badge/IBM-watsonx.ai-blue?logo=ibm)](https://www.ibm.com/watsonx)
-[![Node.js](https://img.shields.io/badge/Node.js-20_LTS-green?logo=node.js)](https://nodejs.org)
-[![React](https://img.shields.io/badge/React-18-61DAFB?logo=react)](https://react.dev)
-[![MongoDB](https://img.shields.io/badge/MongoDB-Atlas-47A248?logo=mongodb)](https://mongodb.com)
+> **Powered by IBM watsonx.ai (Granite 13B & 20B Models)**  
+> *Live Deployment:* [https://edu-flow-ai-six.vercel.app/](https://edu-flow-ai-six.vercel.app/)  
+> *GitHub Repository:* [https://github.com/24co35-ops/EduFlowAI](https://github.com/24co35-ops/EduFlowAI)
 
 ---
 
-## 🚀 What is EduFlow AI?
+## 1. Product Overview
 
-EduFlow AI eliminates the repetitive grind of education content creation. Teachers upload a syllabus and instantly get AI-generated lesson plans, quizzes, and multilingual materials. Students get personalized doubt solving, adaptive quizzes, and instant flashcards — all powered by IBM BOB (watsonx.ai).
-
----
-
-## ✨ Features
-
-### 👩‍🏫 For Teachers
-- 📄 **Syllabus → Lesson Plan** — Upload a PDF, get a structured week-by-week plan
-- ❓ **Auto Quiz Generator** — Generate MCQs, short answers, true/false with difficulty levels
-- 🌐 **Multilingual Content** — Translate materials to Hindi, Marathi, Tamil, Telugu, Kannada
-- 📊 **Class Analytics** — Performance dashboards, weak-topic heatmaps, weekly reports
-- ✅ **Auto Grading** — BOB grades short answers with feedback instantly
-
-### 🧑‍🎓 For Students
-- 💬 **AI Doubt Solver** — Curriculum-aware chat powered by BOB
-- 🃏 **Flashcard Generator** — Paste any chapter → instant flashcards + summary
-- 🎯 **Adaptive Quizzes** — Difficulty adjusts based on your performance
-- 📈 **Progress Tracker** — Score history, streaks, and weak area identification
+EduFlow AI is an enterprise-grade education workflow platform that transforms static curriculum and syllabi into structured daily lesson plans, auto-generated assessments, and closed-loop personalized student remediation. Powered by **IBM watsonx.ai Granite models**, EduFlow AI automates educator administrative overhead while providing transparent, measurable visibility into student understanding.
 
 ---
 
-## 🛠️ Tech Stack
+## 2. Problem & Solution
 
-| Layer | Technology |
-|---|---|
-| Frontend | React 18, Vite, Tailwind CSS, Chart.js, Lucide Icons |
-| Backend | Node.js 20, Express.js (REST API) |
-| AI Engine | IBM BOB (watsonx.ai Granite 13B & 20B) + Google Gemini |
-| Database | MongoDB Atlas / Mongoose (with offline dev fallback) |
-| Auth | JWT + bcrypt (Role-Based Access Control: Teacher & Student) |
-| Deployment | Vercel Serverless / Node.js Standalone |
+### The Problem
+- **Educator Burnout:** Teachers spend 10–15 hours every week manually authoring lesson plans, assembling quizzes, and grading subjective answers.
+- **Disconnected Learning Gaps:** Students lack instant, curriculum-grounded assistance outside class and cannot pinpoint their specific conceptual weak areas.
+- **Generic "AI Chatbots":** Most AI tools act as open-ended chatbots without curriculum grounding, structured output validation, or closed-loop remediation.
 
----
-
-## 📁 Project Structure
-
-```
-eduflow-ai/
-├── api/                     # Vercel serverless entrypoint
-│   └── index.js
-├── client/                  # React + Vite frontend
-│   ├── src/
-│   │   ├── components/      # Navbar, Sidebar, etc.
-│   │   ├── pages/           # Dashboards, Quiz, Lesson, Flashcard pages
-│   │   └── services/        # Axios API client with auth interceptor
-│   └── public/
-├── server/                  # Express backend
-│   ├── config/              # MongoDB connection
-│   ├── controllers/         # Auth, Lesson, Quiz, Student controllers
-│   ├── middleware/          # JWT protect & requireRole RBAC
-│   ├── models/              # Mongoose schemas (User, Lesson, Quiz, etc.)
-│   ├── routes/              # Express route definitions
-│   ├── services/            # bob.service.js (watsonx.ai integration)
-│   └── utils/               # PDF text extraction
-├── .env.example
-├── vercel.json
-└── README.md
+### The EduFlow AI Closed Loop
+```text
+Curriculum / Syllabus PDF
+           ↓
+Plan: 5-Day Structured Lesson Plan (Granite 13B Instruct)
+           ↓
+Teach: Multilingual Content in 5+ Indian Languages (Granite 20B Multilingual)
+           ↓
+Assess: Adaptive Quizzes & NLP Auto-Grading (Granite 13B Instruct)
+           ↓
+Diagnose: Transparent 5-Factor Topic Mastery Engine
+           ↓
+Remediate: 3-Min AI Explanations & Targeted Practice Checks (Granite 13B)
+           ↓
+Mastery Achieved ↺
 ```
 
 ---
 
-## ⚙️ Getting Started
+## 3. Core Features
+
+### 👩‍🏫 Teacher Workflow
+- **Syllabus to 5-Day Lesson Plan (F1):** Ingests PDF or raw text, generates structured 5-day plans with daily durations, learning objectives, and classroom activities.
+- **In-Place Plan Editor:** Allows educators to modify topics, durations, and objectives with database persistence.
+- **Auto Quiz Builder & Editor (F2):** Synthesizes MCQs, True/False, and Short Answer questions with explanations; supports single-question regeneration and in-place editing before publishing.
+- **Multilingual Localization (F3):** Translates lesson plans into Hindi, Marathi, Tamil, Telugu, and Kannada using Granite 20B Multilingual.
+- **Classroom Intelligence & "Who Needs Help?" (F8):** Real-time accuracy heatmaps, topic failure rate alerts, and student risk identification with 1-click remediation dispatch.
+
+### 🧑‍🎓 Student Workflow
+- **Adaptive Practice Quizzes & NLP Auto-Grading (F6 & F7):** Instant grading of objective questions combined with Granite NLP evaluation of short answers with constructive feedback.
+- **Transparent Multi-Factor Topic Mastery Engine:** Computes weighted mastery ($40\%$ recent quiz, $25\%$ historical average, $15\%$ consistency, $10\%$ difficulty factor, $10\%$ improvement trend) across 5 mastery tiers.
+- **Closed-Loop AI Remediation (P1):** Generates a 3-minute explanation, real-world analogy, misconception alert, and 3 interactive practice questions for struggling students.
+- **Curriculum-Grounded AI Doubt Tutor (F4):** Conversational AI tutor with multi-turn history, syllabus bounding, and quick action chips (*"Simplify"*, *"Real-World Example"*, *"Quiz Me"*).
+- **Interactive 3D Flashcards (F5):** Bullet-point executive summaries and flip study cards with mobile touch and keyboard navigation.
+
+### 🛠️ Platform & Observability
+- **Real-Time AI Diagnostics Panel:** Live telemetry tracking latency, request counts, validation status, and active IBM Granite models without exposing sensitive credentials.
+- **Dual-Mode Persistence:** MongoDB Atlas cluster integration with automated in-memory fallback for zero-setup local evaluation.
+
+---
+
+## 4. IBM watsonx.ai Integration Architecture
+
+EduFlow AI utilizes real IBM watsonx.ai Granite models via a modular provider layer in `server/services/ai/`:
+
+| Feature | Function | Target Model ID | Input | Output Format |
+|---|---|---|---|---|
+| **Lesson Plan** | `generateLessonPlan()` | `ibm/granite-13b-instruct-v2` | Syllabus text / PDF | 5-Day plan JSON |
+| **Quiz Builder**| `generateQuiz()` | `ibm/granite-13b-instruct-v2` | Topic, difficulty | MCQ/Short answer JSON |
+| **Auto-Grading** | `autoGradeAnswer()` | `ibm/granite-13b-instruct-v2` | Question, student answer | Score (0-5) + Feedback JSON |
+| **Remediation** | `generateRemediation()` | `ibm/granite-13b-instruct-v2` | Weak topic, score | 3-min lesson + 3 questions JSON |
+| **Flashcards** | `generateFlashcards()` | `ibm/granite-13b-instruct-v2` | Chapter text, title | Summary + 5 Cards JSON |
+| **Doubt Tutor** | `solveDoubt()` | `ibm/granite-13b-chat-v2` | Student query, history | Natural language tutoring reply |
+| **Translation** | `translateText()` | `ibm/granite-20b-multilingual` | Educational text | Localized Indic/English text |
+
+*Full traceability map:* See [`docs/IBM_INTEGRATION_MAP.md`](file:///c:/Users/ASHWITH/Desktop/EduFlow/docs/IBM_INTEGRATION_MAP.md).
+
+---
+
+## 5. Technology Stack
+
+- **Frontend:** React 18, Vite 5, Tailwind CSS 3.4, Lucide Icons, Axios, React Router 6
+- **Backend:** Node.js, Express 4, Mongoose 8, Multer, pdf-parse, Helmet, express-rate-limit, express-mongo-sanitize
+- **Authentication:** Bcryptjs (10 rounds), JSON Web Tokens (7d TTL)
+- **AI Infrastructure:** IBM Cloud watsonx.ai (Granite 13B & 20B) with Google Gemini / Curriculum Smart Engine fallback
+- **Database:** MongoDB Atlas / In-Memory dual-mode store
+- **Deployment:** Vercel Serverless
+
+---
+
+## 6. Quick Start & Local Development
 
 ### Prerequisites
-- Node.js 20+
-- MongoDB (Atlas or local instance)
-- Google Gemini API Key and/or IBM watsonx.ai credentials
+- Node.js >= 18.0.0
+- npm >= 9.0.0
 
-### 1. Clone the Repository
+### Setup
 ```bash
+# 1. Clone the repository
 git clone https://github.com/24co35-ops/EduFlowAI.git
 cd EduFlowAI
-```
 
-### 2. Set Up Environment Variables
-```bash
-cp .env.example .env
-```
-
-Edit `.env`:
-```env
-# AI Providers
-GEMINI_API_KEY=your_gemini_api_key
-GEMINI_MODEL=gemini-1.5-flash
-
-# IBM BOB / watsonx.ai (Optional)
-WATSONX_URL=https://us-south.ml.cloud.ibm.com
-IBM_API_KEY=your_ibm_api_key
-WATSONX_PROJECT_ID=your_project_id
-
-# MongoDB
-MONGO_URI=mongodb://localhost:27017/eduflow
-
-# Auth & CORS
-JWT_SECRET=your_super_secret_jwt_key
-CLIENT_URL=http://localhost:5173
-```
-
-### 3. Install Dependencies
-
-```bash
-# From repository root
+# 2. Install dependencies
 npm run install:all
+
+# 3. Configure environment
+cp .env.example .env
+
+# 4. Start full-stack development server
+npm run dev
 ```
-
-### 4. Run the Application
-
-```bash
-# Start backend (port 5000)
-npm run server
-
-# Start frontend (port 5173) in another terminal
-npm run client
-```
-
-App runs at:
-- Frontend: `http://localhost:5173`
-- Backend API: `http://localhost:5000`
+- Client runs at: `http://localhost:5173`
+- Server runs at: `http://localhost:5000`
 
 ---
 
-## 🔌 IBM BOB Integration
+## 7. Pre-Seeded Demo Accounts
 
-All AI features route through `server/services/bob.service.js` with direct IAM authentication and automatic fallback:
-
-```javascript
-// Example: Direct REST IAM integration in server/services/bob.service.js
-const tokenRes = await axios.post(
-  'https://iam.cloud.ibm.com/identity/token',
-  new URLSearchParams({
-    grant_type: 'urn:ibm:params:oauth:grant-type:apikey',
-    apikey: process.env.IBM_API_KEY
-  })
-);
-
-const response = await axios.post(
-  `${process.env.WATSONX_URL}/ml/v1/text/generation?version=2024-05-31`,
-  {
-    model_id: 'ibm/granite-13b-instruct-v2',
-    project_id: process.env.WATSONX_PROJECT_ID,
-    input: `Generate a structured lesson plan for: ${syllabus}`,
-    parameters: { max_new_tokens: 1500, temperature: 0.7 }
-  },
-  { headers: { Authorization: `Bearer ${tokenRes.data.access_token}` } }
-);
-```
-
----
-
-## 📡 API Reference
-
-| Method | Endpoint | Description | Auth Required |
+| Role | Email | Password | Access / Permissions |
 |---|---|---|---|
-| POST | `/api/auth/register` | Register user (min 8 char password) | No |
-| POST | `/api/auth/login` | Login, get JWT token | No |
-| POST | `/api/auth/forgot-password` | Request password reset email | No |
-| POST | `/api/auth/reset-password/:token` | Reset password with token | No |
-| GET | `/api/health` | Healthcheck & AI engine status | No |
-| POST | `/api/lessons/generate` | Generate lesson plan from syllabus PDF | Yes (Teacher) |
-| POST | `/api/lessons/translate` | Translate lesson plan (multilingual) | Yes (Teacher) |
-| GET | `/api/lessons` | Get teacher's own lesson plans | Yes |
-| GET | `/api/lessons/:id` | Get specific lesson plan | Yes |
-| POST | `/api/quizzes/generate` | Generate quiz for a topic | Yes (Teacher) |
-| POST | `/api/quizzes/grade` | Auto-grade student attempt | Yes (Student) |
-| GET | `/api/quizzes` | Get quizzes | Yes |
-| GET | `/api/quizzes/attempts` | Get quiz attempt history | Yes |
-| POST | `/api/student/flashcards/generate` | Generate flashcards from text | Yes (Student) |
-| GET | `/api/student/flashcards` | Get student flashcard decks | Yes (Student) |
-| GET | `/api/student/progress` | Get student score history & streak | Yes (Student) |
-| GET | `/api/student/analytics` | Get class analytics dashboard data | Yes (Teacher) |
-| POST | `/api/student/doubt` | AI curriculum-aligned doubt solver | Yes |
+| **Teacher** | `teacher@eduflow.ai` | `teacher123` | Lesson Planner, Quiz Builder, Classroom Analytics, IDOR-protected authoring |
+| **Student** | `student@eduflow.ai` | `student123` | Quizzes & Practice, Flashcards, Doubt Solver, Topic Mastery, AI Remediation |
 
 ---
 
-## 🎯 Demo Flow
+## 8. Verification & Test Suite
 
-1. **Teacher** registers and uploads a Class 10 Science syllabus PDF
-2. BOB generates a complete 5-day lesson plan in seconds
-3. Teacher generates a quiz for "Photosynthesis" at Medium difficulty
-4. **Student** logs in, takes the quiz, gets instant AI feedback + score
-5. Student asks a doubt in the chat — BOB answers within the syllabus scope
-6. Teacher views the analytics dashboard — class performance at a glance
-
----
-
-## 🏆 Hackathon Highlights
-
-- ✅ IBM BOB (watsonx.ai) is the **core AI engine** — not a bolt-on
-- ✅ Solves a **real, measurable problem** in education
-- ✅ Full-stack, deployable on **IBM Cloud** end-to-end
-- ✅ Multilingual support for **Bharat-first** accessibility
-- ✅ Live demo-ready in under 5 minutes
+Run the master 11-step automated verification suite:
+```bash
+node server/test_audit_fixes.js
+```
+**Test Coverage:**
+- Authentication guards (401 verification)
+- Teacher vs Student RBAC (403 verification)
+- Lesson generation & in-place update (`PUT /api/lessons/:id`)
+- Quiz generation & per-question regeneration (`POST /api/quizzes/regenerate-question`)
+- Student quiz grading & multi-factor mastery calculation
+- AI Remediation Loop generation (`POST /api/student/remediation`)
+- Curriculum doubt solver with action chips (`simplify`, `example`, `quiz_me`)
+- Live diagnostic telemetry & observability metrics
 
 ---
 
-## 👥 Team
+## 9. Comprehensive Documentation Index
 
-| Name | Role |
-|---|---|
-| — | Full Stack Developer |
-| — | AI/BOB Integration |
-| — | UI/UX Design |
+- [PRD & Requirements (`docs/PRD.md`)](file:///c:/Users/ASHWITH/Desktop/EduFlow/docs/PRD.md)
+- [System Architecture (`docs/ARCHITECTURE.md`)](file:///c:/Users/ASHWITH/Desktop/EduFlow/docs/ARCHITECTURE.md)
+- [Technology Stack (`docs/TECH_STACK.md`)](file:///c:/Users/ASHWITH/Desktop/EduFlow/docs/TECH_STACK.md)
+- [IBM Integration Map & Audit Trail (`docs/IBM_INTEGRATION_MAP.md`)](file:///c:/Users/ASHWITH/Desktop/EduFlow/docs/IBM_INTEGRATION_MAP.md)
+- [AI Architecture & Prompts (`docs/AI_ARCHITECTURE.md`)](file:///c:/Users/ASHWITH/Desktop/EduFlow/docs/AI_ARCHITECTURE.md)
+- [AI Safety & Grounding (`docs/AI_SAFETY.md`)](file:///c:/Users/ASHWITH/Desktop/EduFlow/docs/AI_SAFETY.md)
+- [Security & Threat Model (`docs/SECURITY.md`)](file:///c:/Users/ASHWITH/Desktop/EduFlow/docs/SECURITY.md)
+- [REST API Specification (`docs/API.md`)](file:///c:/Users/ASHWITH/Desktop/EduFlow/docs/API.md)
+- [Database Schemas & Indexes (`docs/DATABASE.md`)](file:///c:/Users/ASHWITH/Desktop/EduFlow/docs/DATABASE.md)
+- [UI/UX & Design System (`docs/UI_UX.md`)](file:///c:/Users/ASHWITH/Desktop/EduFlow/docs/UI_UX.md)
+- [Automated Testing Suite (`docs/TESTING.md`)](file:///c:/Users/ASHWITH/Desktop/EduFlow/docs/TESTING.md)
+- [Deployment Guide (`docs/DEPLOYMENT.md`)](file:///c:/Users/ASHWITH/Desktop/EduFlow/docs/DEPLOYMENT.md)
+- [Troubleshooting & Diagnostics (`docs/TROUBLESHOOTING.md`)](file:///c:/Users/ASHWITH/Desktop/EduFlow/docs/TROUBLESHOOTING.md)
+- [3-Minute Live Demo Script (`docs/DEMO_SCRIPT.md`)](file:///c:/Users/ASHWITH/Desktop/EduFlow/docs/DEMO_SCRIPT.md)
+- [Open Source Licensing (`docs/OPEN_SOURCE_COMPONENTS.md`)](file:///c:/Users/ASHWITH/Desktop/EduFlow/docs/OPEN_SOURCE_COMPONENTS.md)
+- [Limitations & Roadmap (`docs/LIMITATIONS.md`)](file:///c:/Users/ASHWITH/Desktop/EduFlow/docs/LIMITATIONS.md)
+- [Final Readiness & 1000-Point Audit Report (`docs/FINAL_READINESS_REPORT.md`)](file:///c:/Users/ASHWITH/Desktop/EduFlow/docs/FINAL_READINESS_REPORT.md)
 
 ---
 
-## 📄 License
+## 10. License
 
-MIT License © 2026 EduFlow Team
-
----
-
-> Built with ❤️ at IBM Hackathon 2026 using IBM BOB (watsonx.ai)
+MIT License. Developed for the IBM watsonx.ai Hackathon 2026.

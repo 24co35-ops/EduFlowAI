@@ -4,10 +4,12 @@ import {
   Send, 
   Bot, 
   User, 
-  MessageSquareCode, 
+  Loader2, 
+  BookOpen,
+  Zap,
+  Lightbulb,
   HelpCircle,
-  Loader2,
-  BookOpen
+  ListChecks
 } from 'lucide-react';
 import API from '../services/api';
 
@@ -31,15 +33,15 @@ export default function DoubtSolverPage({ user }) {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, botThinking]);
 
-  const handleSendMessage = async (e) => {
-    e.preventDefault();
-    const question = inputText.trim();
+  const handleSendMessage = async (e, customAction = 'standard', customMessage = null) => {
+    if (e) e.preventDefault();
+    const question = customMessage || inputText.trim();
     if (!question || botThinking) return;
 
     const userMsg = {
       id: 'msg-user-' + Date.now(),
       sender: 'user',
-      text: question,
+      text: customAction !== 'standard' ? `[${customAction.toUpperCase()}]: ${question}` : question,
       timestamp: new Date()
     };
 
@@ -51,7 +53,8 @@ export default function DoubtSolverPage({ user }) {
       const res = await API.post('/student/doubt', {
         message: question,
         syllabusScope,
-        history: messages.slice(-6)
+        history: messages.slice(-6),
+        action: customAction
       });
 
       const botReply = res.data?.reply || 'I could not generate a response. Please try again.';
@@ -74,10 +77,6 @@ export default function DoubtSolverPage({ user }) {
     }
   };
 
-  const handlePresetQuestion = (qText) => {
-    setInputText(qText);
-  };
-
   const PRESET_QUESTIONS = [
     'Explain Photosynthesis formula',
     'What is Ohm Law V=IR?',
@@ -85,6 +84,8 @@ export default function DoubtSolverPage({ user }) {
     'Difference between Series & Parallel circuits',
     'What are acids and bases?'
   ];
+
+  const lastUserMessage = [...messages].reverse().find(m => m.sender === 'user')?.text?.replace(/^\[.*?\]:\s*/, '') || 'Ohm Law';
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto">
@@ -96,11 +97,11 @@ export default function DoubtSolverPage({ user }) {
             <Bot className="w-3.5 h-3.5" /> Feature F4: AI Doubt Solver
           </div>
           <h1 className="text-3xl font-extrabold text-white font-outfit">AI Student Doubt Solver</h1>
-          <p className="text-xs text-slate-400">Curriculum-aligned live doubt tutor powered by Google Gemini & IBM BOB</p>
+          <p className="text-xs text-slate-400">Curriculum-aligned live doubt tutor powered by IBM watsonx.ai Granite</p>
         </div>
 
         {/* Scope Tag */}
-        <div className="flex items-center gap-2 bg-slate-900 px-3 py-2 rounded-xl border border-slate-800 text-xs text-slate-300">
+        <div className="flex items-center gap-2 bg-slate-900 px-3 py-2 rounded-xl border border-slate-800 text-xs text-slate-300 self-start sm:self-auto">
           <BookOpen className="w-4 h-4 text-indigo-400" />
           <span className="font-medium">{syllabusScope}</span>
         </div>
@@ -140,7 +141,7 @@ export default function DoubtSolverPage({ user }) {
                 >
                   {!isUser && (
                     <div className="flex items-center gap-1 text-[10px] font-bold text-indigo-400">
-                      <Sparkles className="w-3 h-3" /> IBM BOB Tutor
+                      <Sparkles className="w-3 h-3" /> IBM BOB Granite Tutor
                     </div>
                   )}
                   <div className="whitespace-pre-wrap leading-relaxed">
@@ -163,7 +164,7 @@ export default function DoubtSolverPage({ user }) {
               </div>
               <div className="p-3 rounded-2xl bg-slate-900 border border-slate-800 text-xs text-indigo-300 flex items-center gap-2">
                 <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                <span>IBM BOB is thinking...</span>
+                <span>IBM BOB is synthesizing explanation...</span>
                 <span className="flex gap-0.5">
                   <span className="w-1 h-1 rounded-full bg-indigo-400 animate-bounce" style={{animationDelay:'0ms'}}/>
                   <span className="w-1 h-1 rounded-full bg-indigo-400 animate-bounce" style={{animationDelay:'150ms'}}/>
@@ -176,15 +177,46 @@ export default function DoubtSolverPage({ user }) {
           <div ref={messagesEndRef} />
         </div>
 
+        {/* Dynamic Action Chips (Simplify, Example, Quiz Me) */}
+        <div className="px-6 py-2 bg-slate-950/80 border-t border-slate-800/80 flex items-center gap-2 overflow-x-auto">
+          <span className="text-[10px] font-bold text-indigo-400 uppercase tracking-wider flex-shrink-0">Tutor Actions:</span>
+          <button
+            type="button"
+            onClick={() => handleSendMessage(null, 'simplify', lastUserMessage)}
+            disabled={botThinking}
+            className="px-3 py-1 rounded-full bg-indigo-950/60 hover:bg-indigo-900/80 border border-indigo-500/30 text-[11px] font-semibold text-indigo-200 flex items-center gap-1 transition-all flex-shrink-0 disabled:opacity-40"
+          >
+            <Zap className="w-3 h-3 text-indigo-400" /> Simplify Concept
+          </button>
+          <button
+            type="button"
+            onClick={() => handleSendMessage(null, 'example', lastUserMessage)}
+            disabled={botThinking}
+            className="px-3 py-1 rounded-full bg-emerald-950/60 hover:bg-emerald-900/80 border border-emerald-500/30 text-[11px] font-semibold text-emerald-200 flex items-center gap-1 transition-all flex-shrink-0 disabled:opacity-40"
+          >
+            <Lightbulb className="w-3 h-3 text-emerald-400" /> Give Real-World Example
+          </button>
+          <button
+            type="button"
+            onClick={() => handleSendMessage(null, 'quiz_me', lastUserMessage)}
+            disabled={botThinking}
+            className="px-3 py-1 rounded-full bg-purple-950/60 hover:bg-purple-900/80 border border-purple-500/30 text-[11px] font-semibold text-purple-200 flex items-center gap-1 transition-all flex-shrink-0 disabled:opacity-40"
+          >
+            <ListChecks className="w-3 h-3 text-purple-400" /> Quiz Me on This
+          </button>
+        </div>
+
         {/* Suggestion Chips */}
-        <div className="px-6 py-2.5 bg-slate-950/60 border-t border-slate-800/80 flex items-center gap-2 overflow-x-auto">
-          <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider flex-shrink-0">Quick Ask:</span>
+        <div className="px-6 py-2 bg-slate-950/40 border-t border-slate-800/40 flex items-center gap-2 overflow-x-auto">
+          <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider flex-shrink-0">Quick Topics:</span>
           {PRESET_QUESTIONS.map((chip, idx) => (
             <button
               key={idx}
-              onClick={() => handlePresetQuestion(chip)}
+              onClick={() => {
+                setInputText(chip);
+              }}
               disabled={botThinking}
-              className="px-3 py-1 rounded-full bg-slate-900 hover:bg-indigo-900/40 border border-slate-800 hover:border-indigo-500/40 text-[11px] font-medium text-slate-300 hover:text-white transition-all flex-shrink-0 disabled:opacity-40"
+              className="px-2.5 py-0.5 rounded-full bg-slate-900 hover:bg-slate-800 border border-slate-800 text-[10px] text-slate-400 hover:text-white transition-all flex-shrink-0 disabled:opacity-40"
             >
               💡 {chip}
             </button>

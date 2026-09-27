@@ -12,12 +12,14 @@ import {
   Clock 
 } from 'lucide-react';
 import { getStudentProgress, getQuizzes } from '../services/api';
+import RemediationModal from '../components/RemediationModal';
 
 export default function StudentDashboard({ user }) {
   const displayName = user?.name || 'Student';
   const [progress, setProgress] = useState(null);
   const [quizzes, setQuizzes] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [selectedTopicForRemediation, setSelectedTopicForRemediation] = useState(null);
 
   useEffect(() => {
     async function loadData() {
@@ -51,7 +53,7 @@ export default function StudentDashboard({ user }) {
               Welcome back, <span className="gradient-text">{displayName}</span> 🚀
             </h1>
             <p className="text-xs text-slate-300 max-w-xl">
-              Ask doubts anytime to IBM BOB, generate instant flashcard decks from your textbook chapters, and take adaptive quizzes tailored to your weak topics.
+              Ask doubts anytime to IBM BOB, generate instant flashcard decks from textbook chapters, and take adaptive quizzes with AI closed-loop remediation.
             </p>
           </div>
 
@@ -159,25 +161,36 @@ export default function StudentDashboard({ user }) {
         {/* Recommended Weak Topic Focus */}
         <div className="lg:col-span-5 glass-card p-6 rounded-3xl border border-slate-800 space-y-4">
           <h3 className="text-base font-bold text-white font-outfit flex items-center gap-2">
-            <LineChart className="w-5 h-5 text-indigo-400" /> Weak Area Focus
+            <LineChart className="w-5 h-5 text-indigo-400" /> Weak Area Remediation
           </h3>
           <p className="text-xs text-slate-400">
-            IBM BOB analyzed your previous quiz scores and identified key areas for revision:
+            IBM BOB detected areas requiring revision. Click Remediate to generate a targeted micro-module:
           </p>
 
           <div className="space-y-2">
-            {progress?.weakTopics?.map((topic, idx) => (
-              <div key={idx} className="p-3.5 rounded-2xl bg-indigo-950/30 border border-indigo-500/20 flex items-center justify-between text-xs font-semibold text-indigo-300">
-                <span>🎯 {topic}</span>
-                <Link to="/doubt-solver" className="text-[11px] underline text-indigo-400 hover:text-white">
-                  Ask Doubt
-                </Link>
+            {(progress?.weakTopics || ['Ohm Law and Resistance Factors']).map((topic, idx) => (
+              <div key={idx} className="p-3.5 rounded-2xl bg-purple-950/20 border border-purple-500/20 flex items-center justify-between text-xs font-semibold text-purple-300">
+                <span className="truncate max-w-[180px]">🎯 {topic}</span>
+                <button
+                  type="button"
+                  onClick={() => setSelectedTopicForRemediation(topic)}
+                  className="px-2.5 py-1 rounded-lg bg-purple-600 hover:bg-purple-500 text-white text-[11px] font-bold flex items-center gap-1 transition-all"
+                >
+                  <Zap className="w-3 h-3 text-purple-200" /> Remediate
+                </button>
               </div>
             ))}
           </div>
         </div>
 
       </div>
+
+      {/* AI Remediation Interactive Modal */}
+      <RemediationModal
+        isOpen={Boolean(selectedTopicForRemediation)}
+        onClose={() => setSelectedTopicForRemediation(null)}
+        initialTopic={selectedTopicForRemediation || 'Ohm Law'}
+      />
 
     </div>
   );

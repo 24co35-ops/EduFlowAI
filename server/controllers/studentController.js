@@ -30,6 +30,69 @@ const memoryFlashcards = IS_PRODUCTION ? [] : [
   }
 ];
 
+/**
+ * Calculates transparent multi-factor topic mastery score
+ * Formula:
+ * Mastery = 40% (recent quiz score) + 25% (historical score) + 15% (consistency) + 10% (difficulty factor) + 10% (improvement trend)
+ */
+function calculateTopicMastery(attemptsForTopic) {
+  if (!attemptsForTopic || attemptsForTopic.length === 0) {
+    return {
+      masteryScore: 0,
+      classification: 'Critical',
+      factors: { recentScore: 0, historicalAvg: 0, consistency: 0, difficultyBonus: 0, improvementTrend: 0 }
+    };
+  }
+
+  // Sort by date ascending
+  const sorted = [...attemptsForTopic].sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+  const recentAttempt = sorted[sorted.length - 1];
+  const recentScore = recentAttempt.percentage || 0;
+
+  const totalScores = sorted.map(a => a.percentage || 0);
+  const historicalAvg = totalScores.reduce((sum, val) => sum + val, 0) / totalScores.length;
+
+  // Consistency: lower standard deviation -> higher consistency score
+  const variance = totalScores.reduce((acc, val) => acc + Math.pow(val - historicalAvg, 2), 0) / totalScores.length;
+  const stdDev = Math.sqrt(variance);
+  const consistency = Math.max(0, Math.min(100, Math.round(100 - stdDev * 2)));
+
+  // Difficulty adjustment bonus
+  const difficultyBonus = recentScore >= 80 ? 100 : recentScore >= 60 ? 75 : 50;
+
+  // Improvement trend: difference between last attempt and first attempt
+  const improvement = sorted.length > 1
+    ? Math.max(0, Math.min(100, 50 + (recentScore - sorted[0].percentage) * 2))
+    : 70;
+
+  const weightedScore = Math.round(
+    0.40 * recentScore +
+    0.25 * historicalAvg +
+    0.15 * consistency +
+    0.10 * difficultyBonus +
+    0.10 * improvement
+  );
+
+  let classification = 'Developing';
+  if (weightedScore < 40) classification = 'Critical';
+  else if (weightedScore < 60) classification = 'Needs Support';
+  else if (weightedScore < 75) classification = 'Developing';
+  else if (weightedScore < 90) classification = 'Proficient';
+  else classification = 'Mastered';
+
+  return {
+    masteryScore: weightedScore,
+    classification,
+    factors: {
+      recentScore,
+      historicalAvg: Math.round(historicalAvg),
+      consistency,
+      difficultyBonus,
+      improvementTrend: Math.round(improvement)
+    }
+  };
+}
+
 exports.generateFlashcards = async (req, res) => {
   try {
     const { text, title = 'Study Deck' } = req.body;
@@ -37,37 +100,7 @@ exports.generateFlashcards = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Chapter text is required to generate flashcards' });
     }
 
-    let bobDeck;
-    try {
-      bobDeck = await bobService.generateFlashcards(text, title);
-    } catch (aiErr) {
-      console.warn('[Flashcards] AI generation error, using local fallback:', aiErr.message);
-      bobDeck = null;
-    }
-
-    // Smart local fallback: extract key sentences from the text as card fronts
-    if (!bobDeck || !bobDeck.cards || bobDeck.cards.length === 0) {
-      const sentences = text.split(/[.!?]/).map(s => s.trim()).filter(s => s.length > 20);
-      const cards = sentences.slice(0, 5).map((sentence, i) => ({
-        front: `Key Concept ${i + 1}: ${sentence.slice(0, 60)}...`,
-        back: sentence
-      }));
-
-      if (cards.length === 0) {
-        cards.push(
-          { front: `What is the core idea of "${title}"?`, back: `The core idea revolves around: ${text.slice(0, 120)}` },
-          { front: 'Key Term / Concept', back: 'Refers to the primary mechanism described in the chapter text.' },
-          { front: 'Practical Application', back: 'Apply the principles from this chapter to solve real-world problems.' }
-        );
-      }
-
-      bobDeck = {
-        title: title || 'Study Deck',
-        summary: `• ${text.slice(0, 80)}...\n• Key concepts extracted from chapter content.\n• Study these cards for quick revision.`,
-        cards
-      };
-    }
-
+    const bobDeck = await bobService.generateFlashcards(text, title);
     const userId = req.user.id || req.user._id;
     const flashcardData = {
       studentId: userId,
@@ -79,51 +112,29 @@ exports.generateFlashcards = async (req, res) => {
     if (getIsConnected()) {
       try {
         const savedDeck = await Flashcard.create(flashcardData);
-        return res.status(201).json({ success: true, deck: savedDeck });
+        return res.status(201).json({ success: true, deck: savedDeck, _aiMetadata: bobDeck._aiMetadata });
       } catch (dbErr) {
-        console.warn('[Flashcards] DB save failed:', dbErr.message);
         if (IS_PRODUCTION) return dbUnavailable(res);
       }
     }
 
-    // Development / demo mode fallback only.
     if (IS_PRODUCTION) return dbUnavailable(res);
     const memDeck = { _id: 'deck-' + Date.now(), ...flashcardData, createdAt: new Date() };
     memoryFlashcards.unshift(memDeck);
-    return res.status(201).json({ success: true, deck: memDeck });
+    return res.status(201).json({ success: true, deck: memDeck, _aiMetadata: bobDeck._aiMetadata });
   } catch (error) {
-    console.error('[Flashcards] Unexpected error:', error.message);
-    // In production, do not fall back to a hardcoded emergency deck.
-    if (IS_PRODUCTION) {
-      return res.status(500).json({ success: false, message: 'Failed to generate flashcards. Please try again.' });
-    }
-    const userId = req.user ? (req.user.id || req.user._id) : 'student';
-    const emergencyDeck = {
-      _id: 'deck-emergency-' + Date.now(),
-      studentId: userId,
-      title: req.body?.title || 'Study Deck',
-      summary: '• Key concepts from the chapter.\n• Review terms and definitions.\n• Apply to practice questions.',
-      cards: [
-        { front: 'Core Concept', back: 'The fundamental principle underlying this topic.' },
-        { front: 'Key Definition', back: 'Refers to the primary mechanism described in your chapter.' },
-        { front: 'Practical Application', back: 'Apply this concept to solve related exam questions.' }
-      ],
-      createdAt: new Date()
-    };
-    return res.status(201).json({ success: true, deck: emergencyDeck });
+    res.status(500).json({ success: false, message: error.message });
   }
 };
 
 exports.getFlashcards = async (req, res) => {
   try {
-    // ponytail: isolate flashcards to the authenticated student
     const userId = req.user.id || req.user._id;
     if (getIsConnected()) {
       const decks = await Flashcard.find({ studentId: userId }).sort({ createdAt: -1 });
       return res.json({ success: true, decks });
     }
 
-    // Development / demo mode fallback only.
     if (IS_PRODUCTION) return dbUnavailable(res);
     const decks = memoryFlashcards.filter(d => String(d.studentId) === String(userId));
     return res.json({ success: true, decks });
@@ -140,7 +151,6 @@ exports.getStudentProgress = async (req, res) => {
     if (getIsConnected()) {
       attempts = await Attempt.find({ studentId }).sort({ createdAt: -1 });
     } else {
-      // Development / demo mode fallback only.
       if (IS_PRODUCTION) return dbUnavailable(res);
       attempts = memoryAttempts.filter(a => String(a.studentId) === String(studentId));
     }
@@ -150,9 +160,27 @@ exports.getStudentProgress = async (req, res) => {
       ? Math.round(attempts.reduce((acc, curr) => acc + (curr.percentage || 0), 0) / totalQuizzesTaken)
       : 0;
 
-    const weakTopics = Array.from(
-      new Set(attempts.filter(a => (a.percentage || 0) < 80).map(a => a.topic))
-    );
+    // Group attempts by topic and calculate transparent mastery scores
+    const topicGroupMap = {};
+    attempts.forEach(a => {
+      const t = a.topic || 'General Science';
+      if (!topicGroupMap[t]) topicGroupMap[t] = [];
+      topicGroupMap[t].push(a);
+    });
+
+    const topicMasteryList = Object.keys(topicGroupMap).map(topic => {
+      const topicAttempts = topicGroupMap[topic];
+      const mastery = calculateTopicMastery(topicAttempts);
+      return {
+        topic,
+        attemptCount: topicAttempts.length,
+        ...mastery
+      };
+    });
+
+    const weakTopics = topicMasteryList
+      .filter(t => t.masteryScore < 75)
+      .map(t => t.topic);
 
     return res.json({
       success: true,
@@ -160,7 +188,8 @@ exports.getStudentProgress = async (req, res) => {
         totalQuizzesTaken,
         averageScore,
         currentStreakDays: totalQuizzesTaken > 0 ? Math.min(totalQuizzesTaken, 7) : 0,
-        weakTopics,
+        weakTopics: weakTopics.length > 0 ? weakTopics : (attempts.filter(a => a.percentage < 80).map(a => a.topic)),
+        topicMastery: topicMasteryList,
         recentAttempts: attempts
       }
     });
@@ -175,7 +204,6 @@ exports.getTeacherAnalytics = async (req, res) => {
     if (getIsConnected()) {
       attempts = await Attempt.find();
     } else {
-      // Development / demo mode fallback only.
       if (IS_PRODUCTION) return dbUnavailable(res);
       attempts = memoryAttempts;
     }
@@ -190,16 +218,22 @@ exports.getTeacherAnalytics = async (req, res) => {
     const topicMap = {};
     attempts.forEach(a => {
       const topicName = a.topic || 'General';
-      if (!topicMap[topicName]) topicMap[topicName] = { total: 0, count: 0 };
+      if (!topicMap[topicName]) topicMap[topicName] = { total: 0, count: 0, attempts: [] };
       topicMap[topicName].total += a.percentage || 0;
       topicMap[topicName].count += 1;
+      topicMap[topicName].attempts.push(a);
     });
 
     const topicPerformance = Object.keys(topicMap).map(topic => {
-      const avg = Math.round(topicMap[topic].total / topicMap[topic].count);
+      const group = topicMap[topic];
+      const avg = Math.round(group.total / group.count);
+      const masteryObj = calculateTopicMastery(group.attempts);
+
       return {
         topic,
         avgScore: avg,
+        masteryScore: masteryObj.masteryScore,
+        classification: masteryObj.classification,
         difficulty: avg >= 80 ? 'Easy' : avg >= 70 ? 'Medium' : 'Hard'
       };
     });
@@ -209,8 +243,31 @@ exports.getTeacherAnalytics = async (req, res) => {
       .map(t => ({
         topic: t.topic,
         failureRate: `${100 - t.avgScore}%`,
-        recommendation: 'IBM BOB recommended a 15-minute diagnostic recap session.'
+        classification: t.classification,
+        recommendation: `IBM Granite 13B recommends a 15-minute diagnostic recap and practice set for ${t.topic}.`
       }));
+
+    // Identify students needing support
+    const studentRiskMap = {};
+    attempts.forEach(a => {
+      if (!studentRiskMap[a.studentId]) {
+        studentRiskMap[a.studentId] = { studentName: a.studentName || 'Student', attempts: [], totalScore: 0 };
+      }
+      studentRiskMap[a.studentId].attempts.push(a);
+      studentRiskMap[a.studentId].totalScore += a.percentage || 0;
+    });
+
+    const studentsAtRisk = Object.keys(studentRiskMap).map(sId => {
+      const s = studentRiskMap[sId];
+      const avg = Math.round(s.totalScore / s.attempts.length);
+      return {
+        studentId: sId,
+        studentName: s.studentName,
+        averageScore: avg,
+        needsSupport: avg < 70,
+        weakTopics: Array.from(new Set(s.attempts.filter(a => a.percentage < 75).map(a => a.topic)))
+      };
+    }).filter(s => s.needsSupport);
 
     return res.json({
       success: true,
@@ -220,10 +277,11 @@ exports.getTeacherAnalytics = async (req, res) => {
         classAverageScore,
         timeSavedHoursThisWeek: Number((quizzesCompleted * 0.35 + 2).toFixed(1)),
         topicPerformance: topicPerformance.length > 0 ? topicPerformance : [
-          { topic: 'Electric Current & Ohm Law', avgScore: 88, difficulty: 'Easy' },
-          { topic: 'Photosynthesis & Calvin Cycle', avgScore: 82, difficulty: 'Medium' }
+          { topic: 'Electric Current & Ohm Law', avgScore: 88, masteryScore: 88, classification: 'Proficient', difficulty: 'Easy' },
+          { topic: 'Photosynthesis & Calvin Cycle', avgScore: 82, masteryScore: 80, classification: 'Proficient', difficulty: 'Medium' }
         ],
-        weakTopicAlerts
+        weakTopicAlerts,
+        studentsAtRisk
       }
     });
   } catch (error) {
@@ -231,91 +289,42 @@ exports.getTeacherAnalytics = async (req, res) => {
   }
 };
 
-
 exports.solveDoubt = async (req, res) => {
   try {
-    const { message, syllabusScope = '', history = [] } = req.body;
+    const { message, syllabusScope = 'Class 10 Science', history = [], action = 'standard' } = req.body;
     if (!message || !message.trim()) {
       return res.status(400).json({ success: false, message: 'Question is required.' });
     }
 
-    // Try Google Gemini if API key is present
-    const geminiKey = process.env.GEMINI_API_KEY;
-    if (geminiKey && geminiKey.trim().length > 10) {
-      try {
-        const axios = require('axios');
-        const geminiModel = process.env.GEMINI_MODEL || 'gemini-1.5-flash';
-        const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${geminiModel}:generateContent?key=${geminiKey}`;
-
-        const promptText = `System: You are EduFlow AI Tutor - a friendly, expert educational assistant for school students.
-Syllabus Scope: ${syllabusScope || 'Class 10 Science & Technology'}
-
-Instructions:
-- Explain concepts clearly step-by-step.
-- Use simple, encouraging language appropriate for school students.
-- Include relevant formulas, key definitions, or examples where helpful.
-- Format using bullet points or numbered steps.
-
-Student Question: ${message}`;
-
-        const geminiRes = await axios.post(
-          geminiUrl,
-          {
-            contents: [
-              {
-                parts: [{ text: promptText }]
-              }
-            ]
-          },
-          {
-            headers: { 'Content-Type': 'application/json' },
-            timeout: 10000
-          }
-        );
-
-        const aiText = geminiRes.data?.candidates?.[0]?.content?.parts?.[0]?.text;
-        if (aiText) {
-          return res.json({ success: true, reply: aiText.trim() });
-        }
-      } catch (geminiErr) {
-        console.warn('[Doubt Solver] Gemini API call skipped/failed, using fallback:', geminiErr.message);
-      }
+    let modifiedPrompt = message;
+    if (action === 'simplify') {
+      modifiedPrompt = `Please explain this in the simplest possible everyday terms for a beginner: ${message}`;
+    } else if (action === 'example') {
+      modifiedPrompt = `Please provide 2 tangible real-world practical examples illustrating: ${message}`;
+    } else if (action === 'quiz_me') {
+      modifiedPrompt = `Ask me 2 quick diagnostic quiz questions to check my understanding of: ${message}`;
     }
 
-    // Try IBM BOB watsonx.ai fallback
-    try {
-      const bobReply = await bobService.solveDoubt(message, history, syllabusScope);
-      if (bobReply) {
-        return res.json({ success: true, reply: bobReply });
-      }
-    } catch (bobErr) {
-      console.warn('[Doubt Solver] IBM BOB error:', bobErr.message);
-    }
-
-    // Smart curriculum keyword fallback
-    const q = message.toLowerCase();
-    let reply;
-
-    if (q.includes('photosynthesis') || q.includes('chlorophyll') || q.includes('plant energy')) {
-      reply = `🌱 **Photosynthesis Explained:**\n\n**Chemical Equation:**\n6CO₂ + 6H₂O + Light Energy → C₆H₁₂O₆ + 6O₂\n\n**Two Main Stages:**\n1. **Light-Dependent Reactions** (Thylakoid membrane):\n   - Absorbs sunlight via chlorophyll\n   - Produces ATP & NADPH\n   - Splits water molecules (photolysis)\n\n2. **Calvin Cycle / Dark Reactions** (Stroma):\n   - Uses ATP to fix CO₂ into glucose\n   - Doesn't directly need light\n\n**Key Point:** Chlorophyll absorbs red & blue light but reflects green (that's why plants look green!)`;
-    } else if (q.includes('ohm') || q.includes('v=ir') || q.includes('resistance') || q.includes('voltage')) {
-      reply = `⚡ **Ohm's Law Explained:**\n\n**Formula:** V = I × R\n- **V** = Voltage (Volts, V)\n- **I** = Current (Amperes, A)\n- **R** = Resistance (Ohms, Ω)\n\n**What it means:**\nThe voltage across a conductor is directly proportional to the current flowing through it, when temperature is constant.\n\n**Example:** If R = 10Ω and I = 2A:\nV = 2 × 10 = **20 Volts**\n\n**Memory Trick:** Think of water in a pipe:\n- Voltage = Water pressure\n- Current = Water flow rate\n- Resistance = Pipe narrowness`;
-    } else if (q.includes('newton') || q.includes('motion') || q.includes('inertia') || q.includes('force')) {
-      reply = `⚛️ **Newton's Laws of Motion:**\n\n**1st Law (Inertia):**\nAn object stays at rest or in uniform motion unless acted on by an external force.\n*Example: A ball rolling on a frictionless surface keeps moving forever.*\n\n**2nd Law (F = ma):**\nForce = Mass × Acceleration\n*Example: A 5kg object accelerating at 3 m/s² needs F = 5×3 = 15N*\n\n**3rd Law (Action-Reaction):**\nEvery action has an equal and opposite reaction.\n*Example: A rocket pushes exhaust gases down → gases push rocket up!*`;
-    } else if (q.includes('series') || q.includes('parallel') || q.includes('circuit')) {
-      reply = `🔌 **Series vs Parallel Circuits:**\n\n**Series Circuit:**\n- Components connected end-to-end in a single path\n- Same current flows through all\n- Total R = R₁ + R₂ + R₃\n- If one breaks → all stop working\n\n**Parallel Circuit:**\n- Components connected across same two points\n- Same voltage across all\n- 1/R_total = 1/R₁ + 1/R₂ + 1/R₃\n- If one breaks → others keep working`;
-    } else if (q.includes('acid') || q.includes('base') || q.includes('ph') || q.includes('alkali')) {
-      reply = `🧪 **Acids & Bases:**\n\n**Acids:**\n- pH < 7\n- Taste sour (like lemon juice)\n- Turn blue litmus **red**\n\n**Bases (Alkalis):**\n- pH > 7\n- Taste bitter, feel slippery\n- Turn red litmus **blue**\n\n**Neutralization Reaction:**\nAcid + Base → Salt + Water (e.g. HCl + NaOH → NaCl + H₂O)`;
-    } else {
-      reply = `🤖 **EduFlow AI Tutor Response:**\n\nGreat question regarding *"${message}"*!\n\nHere is how to understand this concept step-by-step:\n\n1. **Core Principle:** Identify the fundamental rules and parameters involved.\n2. **Curriculum Context:** Connect this topic to your Class 10 Science syllabus.\n3. **Application:** Observe how this principle operates in real-world scenarios.\n\n💡 *Tip: Try asking with specific keywords like "What is Ohm Law", "Explain Photosynthesis", or "What are Newton's Laws"!*`;
-    }
-
+    const reply = await bobService.solveDoubt(modifiedPrompt, history, syllabusScope);
     return res.json({ success: true, reply });
   } catch (error) {
-    console.error('[Doubt Solver] Unexpected error:', error.message);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+exports.generateRemediation = async (req, res) => {
+  try {
+    const { topic, studentScore = 50, weakSubtopics = [] } = req.body;
+    if (!topic || !topic.trim()) {
+      return res.status(400).json({ success: false, message: 'Topic is required for remediation generation' });
+    }
+
+    const remediation = await bobService.generateRemediation(topic, studentScore, weakSubtopics);
     return res.json({
       success: true,
-      reply: `🤖 **EduFlow AI Tutor Response:**\n\nGreat question regarding "${req.body?.message || 'this topic'}"!\n\nOhm's Law states that V = I × R (Voltage = Current × Resistance). If you have further questions on this or any other syllabus topic, feel free to ask!`
+      remediation
     });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
   }
 };

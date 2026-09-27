@@ -3,14 +3,17 @@ import {
   Sparkles, 
   FileCheck2, 
   CheckCircle, 
-  HelpCircle, 
   Zap, 
   Send, 
-  Layers, 
   Loader2,
-  ListPlus
+  Edit3,
+  Save,
+  RotateCw,
+  Plus,
+  Trash2,
+  Check
 } from 'lucide-react';
-import { generateQuiz, getQuizzes } from '../services/api';
+import { generateQuiz, getQuizzes, updateQuiz, regenerateQuestion } from '../services/api';
 
 export default function QuizBuilderPage() {
   const [topic, setTopic] = useState('Photosynthesis & Cellular Respiration');
@@ -20,6 +23,12 @@ export default function QuizBuilderPage() {
   const [quizzes, setQuizzes] = useState([]);
   const [activeQuiz, setActiveQuiz] = useState(null);
   const [publishedSuccess, setPublishedSuccess] = useState(false);
+  
+  // Edit states
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedQuiz, setEditedQuiz] = useState(null);
+  const [saving, setSaving] = useState(false);
+  const [regenIdx, setRegenIdx] = useState(null);
 
   useEffect(() => {
     async function loadQuizzes() {
@@ -28,6 +37,7 @@ export default function QuizBuilderPage() {
         if (res.data.quizzes && res.data.quizzes.length > 0) {
           setQuizzes(res.data.quizzes);
           setActiveQuiz(res.data.quizzes[0]);
+          setEditedQuiz(JSON.parse(JSON.stringify(res.data.quizzes[0])));
         }
       } catch (err) {
         console.warn('Quiz fetch error:', err);
@@ -40,11 +50,13 @@ export default function QuizBuilderPage() {
     e.preventDefault();
     setLoading(true);
     setPublishedSuccess(false);
+    setIsEditing(false);
 
     try {
       const res = await generateQuiz({ topic, difficulty, questionCount });
       if (res.data.success) {
         setActiveQuiz(res.data.quiz);
+        setEditedQuiz(JSON.parse(JSON.stringify(res.data.quiz)));
         setQuizzes([res.data.quiz, ...quizzes]);
       }
     } catch (err) {
@@ -54,9 +66,57 @@ export default function QuizBuilderPage() {
     }
   };
 
-  const handlePublish = () => {
-    setPublishedSuccess(true);
-    setTimeout(() => setPublishedSuccess(false), 3000);
+  const handlePublish = async () => {
+    if (!activeQuiz) return;
+    try {
+      await updateQuiz(activeQuiz._id, { status: 'published' });
+      setPublishedSuccess(true);
+      setTimeout(() => setPublishedSuccess(false), 3000);
+    } catch (err) {
+      alert('Error publishing quiz: ' + (err.response?.data?.message || err.message));
+    }
+  };
+
+  const handleRegenerateSingle = async (idx) => {
+    if (!editedQuiz) return;
+    setRegenIdx(idx);
+    try {
+      const targetQ = editedQuiz.questions[idx];
+      const res = await regenerateQuestion({
+        topic: editedQuiz.topic,
+        difficulty: targetQ.difficulty || editedQuiz.difficulty,
+        type: targetQ.type || 'mcq'
+      });
+      if (res.data.success && res.data.question) {
+        const updatedQuestions = [...editedQuiz.questions];
+        updatedQuestions[idx] = res.data.question;
+        setEditedQuiz({ ...editedQuiz, questions: updatedQuestions });
+      }
+    } catch (err) {
+      alert('Error regenerating question: ' + (err.response?.data?.message || err.message));
+    } finally {
+      setRegenIdx(null);
+    }
+  };
+
+  const handleSaveQuizEdits = async () => {
+    if (!editedQuiz || !editedQuiz._id) return;
+    setSaving(true);
+    try {
+      const res = await updateQuiz(editedQuiz._id, {
+        topic: editedQuiz.topic,
+        difficulty: editedQuiz.difficulty,
+        questions: editedQuiz.questions
+      });
+      if (res.data.success) {
+        setActiveQuiz(res.data.quiz);
+        setIsEditing(false);
+      }
+    } catch (err) {
+      alert('Error saving quiz edits: ' + (err.response?.data?.message || err.message));
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -69,16 +129,47 @@ export default function QuizBuilderPage() {
             <Zap className="w-3.5 h-3.5" /> Feature F2: IBM BOB Auto Quiz Engine
           </div>
           <h1 className="text-3xl font-extrabold text-white font-outfit">Auto Quiz Builder</h1>
-          <p className="text-xs text-slate-400">Generate adaptive MCQs, Short Answers, and True/False questions instantly with IBM Granite models</p>
+          <p className="text-xs text-slate-400">Generate, customize, and edit assessment questions with IBM Granite models</p>
         </div>
 
         {activeQuiz && (
-          <button
-            onClick={handlePublish}
-            className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-bold shadow-lg shadow-emerald-600/25 flex items-center gap-2 transition-all"
-          >
-            <Send className="w-4 h-4" /> Publish to Class 10
-          </button>
+          <div className="flex items-center gap-2 self-start">
+            <button
+              onClick={() => {
+                if (isEditing) {
+                  setEditedQuiz(JSON.parse(JSON.stringify(activeQuiz)));
+                  setIsEditing(false);
+                } else {
+                  setIsEditing(true);
+                }
+              }}
+              className={`px-3.5 py-2 rounded-xl border text-xs font-bold flex items-center gap-1.5 transition-colors ${
+                isEditing
+                  ? 'bg-amber-500/20 text-amber-300 border-amber-500/30'
+                  : 'bg-slate-900 border-slate-700 text-slate-300 hover:bg-slate-800'
+              }`}
+            >
+              <Edit3 className="w-3.5 h-3.5" /> {isEditing ? 'Cancel Edit' : 'Edit Questions'}
+            </button>
+
+            {isEditing ? (
+              <button
+                onClick={handleSaveQuizEdits}
+                disabled={saving}
+                className="px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold flex items-center gap-1.5 shadow-md transition-all disabled:opacity-50"
+              >
+                {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+                <span>Save Changes</span>
+              </button>
+            ) : (
+              <button
+                onClick={handlePublish}
+                className="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-bold shadow-lg shadow-emerald-600/25 flex items-center gap-2 transition-all"
+              >
+                <Send className="w-4 h-4" /> Publish to Students
+              </button>
+            )}
+          </div>
         )}
       </div>
 
@@ -141,8 +232,8 @@ export default function QuizBuilderPage() {
                 className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-white text-xs focus:outline-none focus:border-purple-500"
               >
                 <option value={3}>3 Questions (Quick Check)</option>
-                <option value={5}>5 Questions (Standard)</option>
-                <option value={8}>8 Questions (Comprehensive Test)</option>
+                <option value={4}>4 Questions (Standard)</option>
+                <option value={6}>6 Questions (Comprehensive)</option>
               </select>
             </div>
 
@@ -173,7 +264,11 @@ export default function QuizBuilderPage() {
                 {quizzes.map((q) => (
                   <button
                     key={q._id}
-                    onClick={() => setActiveQuiz(q)}
+                    onClick={() => {
+                      setActiveQuiz(q);
+                      setEditedQuiz(JSON.parse(JSON.stringify(q)));
+                      setIsEditing(false);
+                    }}
                     className={`w-full p-3 rounded-xl border text-left transition-all flex items-center justify-between text-xs font-semibold ${
                       activeQuiz?._id === q._id
                         ? 'bg-purple-950/60 border-purple-500 text-white'
@@ -192,7 +287,7 @@ export default function QuizBuilderPage() {
 
         </div>
 
-        {/* Quiz Preview Render */}
+        {/* Quiz Preview & Edit Render */}
         <div className="lg:col-span-7 space-y-6">
           {activeQuiz ? (
             <div className="glass-card p-6 rounded-3xl border border-slate-800 space-y-6">
@@ -200,28 +295,57 @@ export default function QuizBuilderPage() {
               <div className="flex items-center justify-between border-b border-slate-800 pb-4">
                 <div>
                   <span className="px-2.5 py-0.5 rounded-full bg-purple-500/10 text-purple-300 border border-purple-500/20 text-[10px] font-bold uppercase">
-                    Preview Mode
+                    {isEditing ? 'Editing Mode' : 'Preview Mode'}
                   </span>
                   <h2 className="text-xl font-bold text-white font-outfit mt-1">{activeQuiz.topic}</h2>
-                  <p className="text-xs text-slate-400">Difficulty: <span className="capitalize text-purple-300 font-semibold">{activeQuiz.difficulty}</span> • Total Questions: {activeQuiz.questions?.length}</p>
+                  <p className="text-xs text-slate-400">
+                    Difficulty: <span className="capitalize text-purple-300 font-semibold">{activeQuiz.difficulty}</span> • Total Questions: {(isEditing ? editedQuiz?.questions : activeQuiz.questions)?.length}
+                  </p>
                 </div>
               </div>
 
               {/* Questions List */}
               <div className="space-y-4">
-                {activeQuiz.questions?.map((q, idx) => (
+                {(isEditing ? editedQuiz?.questions : activeQuiz.questions)?.map((q, idx) => (
                   <div key={idx} className="p-5 rounded-2xl bg-slate-900/80 border border-slate-800 space-y-3">
                     
                     <div className="flex items-start justify-between gap-3">
-                      <div className="flex items-start gap-2.5">
+                      <div className="flex items-start gap-2.5 flex-1">
                         <span className="w-6 h-6 rounded-lg bg-purple-600/20 text-purple-400 font-bold text-xs flex items-center justify-center border border-purple-500/30 flex-shrink-0 mt-0.5">
                           Q{idx + 1}
                         </span>
-                        <h4 className="text-xs font-bold text-white leading-relaxed">{q.question}</h4>
+                        {isEditing ? (
+                          <textarea
+                            rows={2}
+                            value={q.question}
+                            onChange={(e) => {
+                              const updated = [...editedQuiz.questions];
+                              updated[idx].question = e.target.value;
+                              setEditedQuiz({ ...editedQuiz, questions: updated });
+                            }}
+                            className="w-full text-xs font-bold text-white bg-slate-950 border border-slate-700 p-2 rounded-xl"
+                          />
+                        ) : (
+                          <h4 className="text-xs font-bold text-white leading-relaxed">{q.question}</h4>
+                        )}
                       </div>
-                      <span className="px-2 py-0.5 rounded text-[9px] font-bold bg-slate-800 text-slate-400 border border-slate-700 uppercase flex-shrink-0">
-                        {q.type}
-                      </span>
+
+                      <div className="flex items-center gap-1.5 flex-shrink-0">
+                        <span className="px-2 py-0.5 rounded text-[9px] font-bold bg-slate-800 text-slate-400 border border-slate-700 uppercase">
+                          {q.type}
+                        </span>
+                        {isEditing && (
+                          <button
+                            type="button"
+                            onClick={() => handleRegenerateSingle(idx)}
+                            disabled={regenIdx === idx}
+                            title="Regenerate this question with IBM BOB"
+                            className="p-1 rounded-lg bg-indigo-600/20 text-indigo-300 hover:bg-indigo-600 hover:text-white transition-colors"
+                          >
+                            <RotateCw className={`w-3.5 h-3.5 ${regenIdx === idx ? 'animate-spin' : ''}`} />
+                          </button>
+                        )}
+                      </div>
                     </div>
 
                     {/* Options if MCQ */}

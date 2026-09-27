@@ -38,12 +38,17 @@ export const resetPassword = (token, password) => API.post(`/auth/reset-password
 export const generateLessonPlan = (formData) => API.post('/lessons/generate', formData, {
   headers: { 'Content-Type': 'multipart/form-data' }
 });
+export const updateLessonPlan = (id, data) => API.put(`/lessons/${id}`, data);
+export const deleteLessonPlan = (id) => API.delete(`/lessons/${id}`);
 export const translateLessonPlan = (data) => API.post('/lessons/translate', data);
 export const getLessons = () => API.get('/lessons');
 export const getLessonById = (id) => API.get(`/lessons/${id}`);
 
 // Quizzes API
 export const generateQuiz = (data) => API.post('/quizzes/generate', data);
+export const updateQuiz = (id, data) => API.put(`/quizzes/${id}`, data);
+export const regenerateQuestion = (data) => API.post('/quizzes/regenerate-question', data);
+export const deleteQuiz = (id) => API.delete(`/quizzes/${id}`);
 export const gradeQuizAttempt = (data) => API.post('/quizzes/grade', data);
 export const getQuizzes = () => API.get('/quizzes');
 export const getQuizById = (id) => API.get(`/quizzes/${id}`);
@@ -54,5 +59,9 @@ export const generateFlashcards = (data) => API.post('/student/flashcards/genera
 export const getFlashcards = () => API.get('/student/flashcards');
 export const getStudentProgress = () => API.get('/student/progress');
 export const getTeacherAnalytics = () => API.get('/student/analytics');
+export const generateRemediation = (data) => API.post('/student/remediation', data);
+
+// Diagnostic Health API
+export const getHealth = (diagnostics = true) => API.get(`/health?diagnostics=${diagnostics}`);
 
 export default API;

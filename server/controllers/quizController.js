@@ -70,10 +70,10 @@ const memoryAttempts = IS_PRODUCTION ? [] : [
     maxScore: 20,
     percentage: 90,
     answers: [
-      { questionIndex: 0, questionText: 'Which organelle...', userAnswer: 'Chloroplast', correctAnswer: 'Chloroplast', isCorrect: true, score: 5, feedback: 'Correct!' },
-      { questionIndex: 1, questionText: 'What outputs...', userAnswer: 'ATP and NADPH', correctAnswer: 'ATP and NADPH', isCorrect: true, score: 5, feedback: 'Correct!' },
-      { questionIndex: 2, questionText: 'True or False...', userAnswer: 'True', correctAnswer: 'True', isCorrect: true, score: 5, feedback: 'Correct!' },
-      { questionIndex: 3, questionText: 'Explain why green...', userAnswer: 'Chlorophyll reflects green light and absorbs other colors.', correctAnswer: 'Chlorophyll reflects green light.', isCorrect: true, score: 3, feedback: 'IBM BOB Feedback: Good explanation, core terminology present.' }
+      { questionIndex: 0, questionText: 'Which cellular organelle is the primary site of photosynthesis in plant cells?', userAnswer: 'Chloroplast', correctAnswer: 'Chloroplast', isCorrect: true, score: 5, feedback: 'Correct!' },
+      { questionIndex: 1, questionText: 'What are the two major chemical outputs of the light-dependent reactions of photosynthesis?', userAnswer: 'ATP and NADPH', correctAnswer: 'ATP and NADPH', isCorrect: true, score: 5, feedback: 'Correct!' },
+      { questionIndex: 2, questionText: 'True or False: The Calvin Cycle (dark reactions) can occur in the absence of light as long as ATP and NADPH are available.', userAnswer: 'True', correctAnswer: 'True', isCorrect: true, score: 5, feedback: 'Correct!' },
+      { questionIndex: 3, questionText: 'Explain why plants appear green to the human eye.', userAnswer: 'Chlorophyll reflects green light and absorbs other colors.', correctAnswer: 'Chlorophyll reflects green light.', isCorrect: true, score: 3, feedback: 'IBM Granite Feedback: Good explanation, core terminology present.' }
     ],
     createdAt: new Date()
   }
@@ -81,14 +81,14 @@ const memoryAttempts = IS_PRODUCTION ? [] : [
 
 exports.generateQuiz = async (req, res) => {
   try {
-    const { topic, difficulty = 'medium', questionCount = 4 } = req.body;
+    const { topic, difficulty = 'medium', questionCount = 4, assignedGrade = 'Class 10' } = req.body;
 
     if (!topic) {
       return res.status(400).json({ success: false, message: 'Quiz topic is required' });
     }
 
     // Call IBM BOB engine
-    const questions = await bobService.generateQuiz(topic, difficulty, questionCount);
+    const questions = await bobService.generateQuiz(topic, difficulty, questionCount, assignedGrade);
 
     const userId = req.user.id || req.user._id;
     const quizData = {
@@ -97,7 +97,7 @@ exports.generateQuiz = async (req, res) => {
       difficulty,
       questions,
       status: 'published',
-      assignedGrade: req.body.assignedGrade || 'Class 10'
+      assignedGrade
     };
 
     if (getIsConnected()) {
@@ -105,7 +105,6 @@ exports.generateQuiz = async (req, res) => {
       return res.status(201).json({ success: true, quiz: newQuiz });
     }
 
-    // Development / demo mode fallback only.
     if (IS_PRODUCTION) return dbUnavailable(res);
     const memQuiz = { _id: 'quiz-' + Date.now(), ...quizData, createdAt: new Date() };
     memoryQuizzes.unshift(memQuiz);
@@ -115,10 +114,98 @@ exports.generateQuiz = async (req, res) => {
   }
 };
 
+exports.updateQuiz = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { topic, difficulty, questions, status, assignedGrade } = req.body;
+    const userId = req.user.id || req.user._id;
+
+    if (getIsConnected()) {
+      const quiz = await Quiz.findById(id);
+      if (!quiz) return res.status(404).json({ success: false, message: 'Quiz not found' });
+      if (String(quiz.teacherId) !== String(userId) && req.user.role !== 'admin') {
+        return res.status(403).json({ success: false, message: 'Access denied: You do not own this quiz' });
+      }
+
+      if (topic) quiz.topic = topic;
+      if (difficulty) quiz.difficulty = difficulty;
+      if (questions) quiz.questions = questions;
+      if (status) quiz.status = status;
+      if (assignedGrade) quiz.assignedGrade = assignedGrade;
+
+      const saved = await quiz.save();
+      return res.json({ success: true, quiz: saved });
+    }
+
+    if (IS_PRODUCTION) return dbUnavailable(res);
+    const index = memoryQuizzes.findIndex(q => q._id === id);
+    if (index === -1) return res.status(404).json({ success: false, message: 'Quiz not found' });
+    if (String(memoryQuizzes[index].teacherId) !== String(userId) && req.user.role !== 'admin') {
+      return res.status(403).json({ success: false, message: 'Access denied: You do not own this quiz' });
+    }
+
+    if (topic) memoryQuizzes[index].topic = topic;
+    if (difficulty) memoryQuizzes[index].difficulty = difficulty;
+    if (questions) memoryQuizzes[index].questions = questions;
+    if (status) memoryQuizzes[index].status = status;
+    if (assignedGrade) memoryQuizzes[index].assignedGrade = assignedGrade;
+
+    return res.json({ success: true, quiz: memoryQuizzes[index] });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+exports.regenerateQuestion = async (req, res) => {
+  try {
+    const { topic, difficulty = 'medium', type = 'mcq' } = req.body;
+    if (!topic) return res.status(400).json({ success: false, message: 'Topic is required' });
+
+    const newQuestions = await bobService.generateQuiz(topic, difficulty, 2);
+    const selected = newQuestions.find(q => q.type === type) || newQuestions[0];
+
+    return res.json({
+      success: true,
+      question: selected
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+exports.deleteQuiz = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user.id || req.user._id;
+
+    if (getIsConnected()) {
+      const quiz = await Quiz.findById(id);
+      if (!quiz) return res.status(404).json({ success: false, message: 'Quiz not found' });
+      if (String(quiz.teacherId) !== String(userId) && req.user.role !== 'admin') {
+        return res.status(403).json({ success: false, message: 'Access denied: You do not own this quiz' });
+      }
+
+      await Quiz.deleteOne({ _id: id });
+      return res.json({ success: true, message: 'Quiz deleted successfully' });
+    }
+
+    if (IS_PRODUCTION) return dbUnavailable(res);
+    const index = memoryQuizzes.findIndex(q => q._id === id);
+    if (index === -1) return res.status(404).json({ success: false, message: 'Quiz not found' });
+    if (String(memoryQuizzes[index].teacherId) !== String(userId) && req.user.role !== 'admin') {
+      return res.status(403).json({ success: false, message: 'Access denied: You do not own this quiz' });
+    }
+
+    memoryQuizzes.splice(index, 1);
+    return res.json({ success: true, message: 'Quiz deleted successfully' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 exports.getQuizzes = async (req, res) => {
   try {
     const userId = req.user.id || req.user._id;
-    // ponytail: teacher sees their authored quizzes; student sees published quizzes
     const filter = req.user.role === 'teacher' ? { teacherId: userId } : { status: 'published' };
 
     if (getIsConnected()) {
@@ -126,7 +213,6 @@ exports.getQuizzes = async (req, res) => {
       return res.json({ success: true, quizzes });
     }
 
-    // Development / demo mode fallback only.
     if (IS_PRODUCTION) return dbUnavailable(res);
     const quizzes = req.user.role === 'teacher'
       ? memoryQuizzes.filter(q => String(q.teacherId) === String(userId))
@@ -201,9 +287,9 @@ exports.gradeAttempt = async (req, res) => {
           feedback: isMatch ? 'Correct! High performance.' : `Incorrect. Correct answer is: ${q.correctAnswer}`
         });
       } else {
-        // Short answer auto-graded via IBM BOB NLP
+        // Short answer auto-graded via IBM Granite NLP
         const bobGrading = await bobService.autoGradeAnswer(q.question, q.correctAnswer, String(studentAns));
-        const score = bobGrading.score || 3;
+        const score = bobGrading.score !== undefined ? bobGrading.score : 3;
         totalScore += score;
         gradedAnswers.push({
           questionIndex: i,
@@ -212,7 +298,7 @@ exports.gradeAttempt = async (req, res) => {
           correctAnswer: q.correctAnswer,
           isCorrect: score >= 3,
           score,
-          feedback: `[IBM BOB Auto-Grading Feedback]: ${bobGrading.feedback}`
+          feedback: `[IBM Granite NLP Feedback]: ${bobGrading.feedback}`
         });
       }
     }
@@ -236,7 +322,6 @@ exports.gradeAttempt = async (req, res) => {
       return res.status(201).json({ success: true, attempt: savedAttempt });
     }
 
-    // Development / demo mode fallback only.
     if (IS_PRODUCTION) return dbUnavailable(res);
     const memAttempt = { _id: 'attempt-' + Date.now(), ...attemptData, createdAt: new Date() };
     memoryAttempts.unshift(memAttempt);
@@ -250,7 +335,6 @@ exports.getAttempts = async (req, res) => {
   try {
     const userId = req.user.id || req.user._id;
 
-    // ponytail: students only receive their own attempts
     if (req.user.role === 'student') {
       if (getIsConnected()) {
         const attempts = await Attempt.find({ studentId: userId }).sort({ createdAt: -1 });
@@ -261,18 +345,15 @@ exports.getAttempts = async (req, res) => {
       return res.json({ success: true, attempts });
     }
 
-    // Teacher: only see attempts for quizzes they created (prevents data leakage across teachers).
+    // Teacher: only see attempts for quizzes they created
     if (getIsConnected()) {
-      // Fetch the teacher's quiz IDs first, then filter attempts to those quizzes.
       const teacherQuizIds = await Quiz.find({ teacherId: userId }, '_id').lean();
       const quizIdStrings = teacherQuizIds.map(q => String(q._id));
       const attempts = await Attempt.find({ quizId: { $in: quizIdStrings } }).sort({ createdAt: -1 });
       return res.json({ success: true, attempts });
     }
 
-    // Development / demo mode fallback only.
     if (IS_PRODUCTION) return dbUnavailable(res);
-    // In-memory: filter attempts to quizzes owned by this teacher.
     const teacherQuizIds = memoryQuizzes
       .filter(q => String(q.teacherId) === String(userId))
       .map(q => String(q._id));
@@ -283,4 +364,5 @@ exports.getAttempts = async (req, res) => {
   }
 };
 
+exports.memoryQuizzes = memoryQuizzes;
 exports.memoryAttempts = memoryAttempts;

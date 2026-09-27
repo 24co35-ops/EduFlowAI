@@ -98,14 +98,84 @@ exports.generateLessonPlan = async (req, res) => {
 
     if (getIsConnected()) {
       const savedLesson = await Lesson.create(lessonData);
-      return res.status(201).json({ success: true, lesson: savedLesson });
+      return res.status(201).json({ success: true, lesson: savedLesson, _aiMetadata: bobResult._aiMetadata });
     }
 
     // Fallback store — development / demo mode only.
     if (IS_PRODUCTION) return dbUnavailable(res);
     const memLesson = { _id: 'lesson-' + Date.now(), ...lessonData, createdAt: new Date() };
     memoryLessons.unshift(memLesson);
-    return res.status(201).json({ success: true, lesson: memLesson });
+    return res.status(201).json({ success: true, lesson: memLesson, _aiMetadata: bobResult._aiMetadata });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+exports.updateLessonPlan = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { subject, overview, plan, language } = req.body;
+    const userId = req.user.id || req.user._id;
+
+    if (getIsConnected()) {
+      const lesson = await Lesson.findById(id);
+      if (!lesson) return res.status(404).json({ success: false, message: 'Lesson plan not found' });
+      if (String(lesson.teacherId) !== String(userId) && req.user.role !== 'admin') {
+        return res.status(403).json({ success: false, message: 'Access denied: You do not own this lesson plan' });
+      }
+
+      if (subject) lesson.subject = subject;
+      if (overview) lesson.overview = overview;
+      if (plan) lesson.plan = plan;
+      if (language) lesson.language = language;
+
+      const saved = await lesson.save();
+      return res.json({ success: true, lesson: saved });
+    }
+
+    if (IS_PRODUCTION) return dbUnavailable(res);
+    const index = memoryLessons.findIndex(l => l._id === id);
+    if (index === -1) return res.status(404).json({ success: false, message: 'Lesson plan not found' });
+    if (String(memoryLessons[index].teacherId) !== String(userId) && req.user.role !== 'admin') {
+      return res.status(403).json({ success: false, message: 'Access denied: You do not own this lesson plan' });
+    }
+
+    if (subject) memoryLessons[index].subject = subject;
+    if (overview) memoryLessons[index].overview = overview;
+    if (plan) memoryLessons[index].plan = plan;
+    if (language) memoryLessons[index].language = language;
+
+    return res.json({ success: true, lesson: memoryLessons[index] });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+exports.deleteLessonPlan = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user.id || req.user._id;
+
+    if (getIsConnected()) {
+      const lesson = await Lesson.findById(id);
+      if (!lesson) return res.status(404).json({ success: false, message: 'Lesson plan not found' });
+      if (String(lesson.teacherId) !== String(userId) && req.user.role !== 'admin') {
+        return res.status(403).json({ success: false, message: 'Access denied: You do not own this lesson plan' });
+      }
+
+      await Lesson.deleteOne({ _id: id });
+      return res.json({ success: true, message: 'Lesson plan deleted successfully' });
+    }
+
+    if (IS_PRODUCTION) return dbUnavailable(res);
+    const index = memoryLessons.findIndex(l => l._id === id);
+    if (index === -1) return res.status(404).json({ success: false, message: 'Lesson plan not found' });
+    if (String(memoryLessons[index].teacherId) !== String(userId) && req.user.role !== 'admin') {
+      return res.status(403).json({ success: false, message: 'Access denied: You do not own this lesson plan' });
+    }
+
+    memoryLessons.splice(index, 1);
+    return res.json({ success: true, message: 'Lesson plan deleted successfully' });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
@@ -127,13 +197,12 @@ exports.translateLessonPlan = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Lesson plan not found' });
     }
 
-    // ponytail: enforce ownership check before translation
     const userId = req.user.id || req.user._id;
     if (String(lesson.teacherId) !== String(userId) && req.user.role !== 'admin') {
       return res.status(403).json({ success: false, message: 'Access denied: You do not own this lesson plan' });
     }
 
-    // Perform IBM BOB translation for overview and activities
+    // Perform IBM Granite 20B Multilingual translation
     const textToTranslate = JSON.stringify({
       overview: lesson.overview,
       topics: lesson.plan.map(p => p.topic)
@@ -153,7 +222,6 @@ exports.translateLessonPlan = async (req, res) => {
 
 exports.getLessons = async (req, res) => {
   try {
-    // ponytail: filter by teacherId so educators only see their own lessons
     const userId = req.user.id || req.user._id;
     const filter = req.user.role === 'teacher' ? { teacherId: userId } : {};
 
@@ -162,7 +230,6 @@ exports.getLessons = async (req, res) => {
       return res.json({ success: true, lessons });
     }
 
-    // Development / demo mode fallback only.
     if (IS_PRODUCTION) return dbUnavailable(res);
     const lessons = req.user.role === 'teacher'
       ? memoryLessons.filter(l => String(l.teacherId) === String(userId))
@@ -188,7 +255,6 @@ exports.getLessonById = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Lesson plan not found' });
     }
 
-    // ponytail: prevent teachers from accessing other teachers' lesson plans
     const userId = req.user.id || req.user._id;
     if (req.user.role === 'teacher' && String(lesson.teacherId) !== String(userId)) {
       return res.status(403).json({ success: false, message: 'Access denied: You do not own this lesson plan' });
