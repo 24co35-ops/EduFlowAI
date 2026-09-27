@@ -58,7 +58,7 @@ export function LoginPage({ setUser }) {
 
     setLoading(true);
     try {
-      const res = await loginUser({ email: cleanEmail, password });
+      const res = await loginUser({ email: cleanEmail, password, role: selectedRole });
       if (res.data.success) {
         localStorage.setItem('eduflow_token', res.data.token);
         localStorage.setItem('eduflow_user', JSON.stringify(res.data.user));

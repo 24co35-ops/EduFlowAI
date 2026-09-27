@@ -153,7 +153,7 @@ exports.register = async (req, res) => {
 // ---------------------------------------------------------------------------
 exports.login = async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { email, password, role } = req.body;
     if (!email || !password) {
       return res.status(400).json({ success: false, message: 'Email and password are required.' });
     }
@@ -189,6 +189,12 @@ exports.login = async (req, res) => {
               institution: 'Delhi Public School',
               grade: 'Class 10'
             };
+            if (role && user.role !== role) {
+              return res.status(403).json({
+                success: false,
+                message: `This account is registered as a ${user.role}, not a ${role}. Please use the correct sign-in option.`
+              });
+            }
             const token = generateToken(user);
             return res.json({ success: true, token, user: safeUserPayload(user) });
           }
@@ -218,6 +224,13 @@ exports.login = async (req, res) => {
         grade: profile?.grade || authData.user.user_metadata?.grade || 'Class 10'
       };
 
+      if (role && user.role !== role) {
+        return res.status(403).json({
+          success: false,
+          message: `This account is registered as a ${user.role}, not a ${role}. Please use the correct sign-in option.`
+        });
+      }
+
       const token = generateToken(user);
       return res.json({ success: true, token, user: safeUserPayload(user) });
     }
@@ -231,6 +244,13 @@ exports.login = async (req, res) => {
     const isMatch = await bcrypt.compare(password, foundUser.passwordHash);
     if (!isMatch) {
       return res.status(401).json({ success: false, message: 'Invalid email or password.' });
+    }
+
+    if (role && foundUser.role !== role) {
+      return res.status(403).json({
+        success: false,
+        message: `This account is registered as a ${foundUser.role}, not a ${role}. Please use the correct sign-in option.`
+      });
     }
 
     const token = generateToken(foundUser);

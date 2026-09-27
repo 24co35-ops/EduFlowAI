@@ -237,11 +237,29 @@ async function runTests() {
       assert.ok(err.response?.data?.message.includes('User with this email already exists'), 'Error should match exact duplicate message');
       duplicateFailed = true;
     }
-    assert.strictEqual(duplicateFailed, true, 'Duplicate email should be rejected with 400');
-    console.log('  -> PASS: 8-character password length enforcement and duplicate email errors surfaced accurately');
+    // Test 14: Role mismatch enforcement on login
+    console.log('Test 14: Verifying role mismatch enforcement on login (403)...');
+    let roleMismatchFailed = false;
+    try {
+      await axios.post(`${baseUrl}/auth/login`, {
+        email: 'student@eduflow.ai',
+        password: 'student123',
+        role: 'teacher'
+      });
+    } catch (err) {
+      assert.strictEqual(err.response?.status, 403, 'Expected 403 Forbidden on role mismatch');
+      assert.strictEqual(err.response?.data?.success, false);
+      assert.strictEqual(
+        err.response?.data?.message,
+        'This account is registered as a student, not a teacher. Please use the correct sign-in option.'
+      );
+      roleMismatchFailed = true;
+    }
+    assert.strictEqual(roleMismatchFailed, true, 'Student logging in under teacher role should be rejected with 403');
+    console.log('  -> PASS: Role mismatch rejected with 403 and descriptive message');
 
     console.log('\n==================================================');
-    console.log('🎉 MASTER TEST SUITE: ALL 13 TESTS PASSED PERFECTLY!');
+    console.log('🎉 MASTER TEST SUITE: ALL 14 TESTS PASSED PERFECTLY!');
     console.log('==================================================\n');
   } finally {
     server.close();
