@@ -15,6 +15,7 @@ import {
   Brain
 } from 'lucide-react';
 import { generateFlashcards, getFlashcards } from '../services/api';
+import AIEvidenceBadge from '../components/AIEvidenceBadge';
 
 export default function FlashcardsPage() {
   const [chapterText, setChapterText] = useState(
@@ -29,6 +30,7 @@ export default function FlashcardsPage() {
   const [concepts, setConcepts] = useState([]);
   const [cardIndex, setCardIndex] = useState(0);
   const [isFlipped, setIsFlipped] = useState(false);
+  const [aiMetadata, setAiMetadata] = useState(null);
   const fileInputRef = useRef(null);
 
   useEffect(() => {
@@ -82,6 +84,7 @@ export default function FlashcardsPage() {
       if (res.data.success) {
         setCurrentDeck(res.data.deck);
         setConcepts(Array.isArray(res.data.concepts) ? res.data.concepts : []);
+        if (res.data._aiMetadata) setAiMetadata(res.data._aiMetadata);
       }
     } catch (err) {
       setError(err.response?.data?.message || err.message || 'Error generating flashcards.');
@@ -229,6 +232,9 @@ export default function FlashcardsPage() {
         <div className="lg:col-span-7 space-y-6">
           {currentDeck ? (
             <div className="space-y-6">
+
+              {/* AI Evidence Badge */}
+              <AIEvidenceBadge metadata={aiMetadata} />
 
               {/* Summary Box */}
               <div className="glass-card p-6 rounded-3xl border border-slate-800 space-y-3">

@@ -12,6 +12,7 @@ import {
   ListChecks
 } from 'lucide-react';
 import API from '../services/api';
+import AIEvidenceBadge from '../components/AIEvidenceBadge';
 
 export default function DoubtSolverPage({ user }) {
   const displayName = user?.name || 'Student';
@@ -63,6 +64,7 @@ export default function DoubtSolverPage({ user }) {
         id: 'msg-bot-' + Date.now(),
         sender: 'bob',
         text: botReply,
+        _aiMetadata: res.data?._aiMetadata,
         timestamp: new Date()
       }]);
     } catch (err) {
@@ -147,6 +149,11 @@ export default function DoubtSolverPage({ user }) {
                   <div className="whitespace-pre-wrap leading-relaxed">
                     {msg.text}
                   </div>
+                  {msg._aiMetadata && (
+                    <div className="pt-1">
+                      <AIEvidenceBadge metadata={msg._aiMetadata} compact={true} />
+                    </div>
+                  )}
                   <div className={`text-[9px] mt-1 ${isUser ? 'text-emerald-200' : 'text-slate-600'}`}>
                     {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                   </div>

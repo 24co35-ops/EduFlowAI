@@ -391,8 +391,9 @@ exports.solveDoubt = async (req, res) => {
       modifiedPrompt = `Ask me 2 quick diagnostic quiz questions to check my understanding of: ${message}`;
     }
 
-    const reply = await bobService.solveDoubt(modifiedPrompt, history, syllabusScope);
-    return res.json({ success: true, reply });
+    const aiRes = await bobService.solveDoubt(modifiedPrompt, history, syllabusScope);
+    const replyText = typeof aiRes === 'string' ? aiRes : (aiRes?.reply || 'EduFlow AI Tutor: Concept explained within syllabus guidelines.');
+    return res.json({ success: true, reply: replyText, _aiMetadata: aiRes?._aiMetadata });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }

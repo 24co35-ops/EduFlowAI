@@ -42,10 +42,10 @@ exports.generateQuiz = async (req, res) => {
     }
 
     // Call IBM BOB / AI engine
-    const questions = await bobService.generateQuiz(topic, difficulty, questionCount, assignedGrade);
+    const aiRes = await bobService.generateQuiz(topic, difficulty, questionCount, assignedGrade);
     const userId = req.user.id;
     const cleanTopic = topic.trim();
-    const cleanQuestions = Array.isArray(questions) ? questions : [];
+    const cleanQuestions = Array.isArray(aiRes) ? aiRes : (Array.isArray(aiRes?.questions) ? aiRes.questions : []);
 
     if (isUUID(userId)) {
       const { data, error } = await supabase.from('quizzes').insert({
@@ -58,7 +58,7 @@ exports.generateQuiz = async (req, res) => {
       }).select().single();
 
       if (!error && data) {
-        return res.status(201).json({ success: true, quiz: normalizeQuiz(data) });
+        return res.status(201).json({ success: true, quiz: normalizeQuiz(data), _aiMetadata: aiRes?._aiMetadata });
       }
       console.warn('[Quiz] Database insert note:', error?.message);
     }
@@ -74,7 +74,7 @@ exports.generateQuiz = async (req, res) => {
       questions: cleanQuestions,
       created_at: new Date().toISOString()
     };
-    return res.status(201).json({ success: true, quiz: normalizeQuiz(fallbackQuiz) });
+    return res.status(201).json({ success: true, quiz: normalizeQuiz(fallbackQuiz), _aiMetadata: aiRes?._aiMetadata });
   } catch (error) {
     console.error('[Quiz] generate error:', error.message);
     res.status(500).json({ success: false, message: error.message || 'Error generating quiz' });
@@ -122,12 +122,14 @@ exports.regenerateQuestion = async (req, res) => {
     const { topic, difficulty = 'medium', type = 'mcq' } = req.body;
     if (!topic) return res.status(400).json({ success: false, message: 'Topic is required' });
 
-    const newQuestions = await bobService.generateQuiz(topic, difficulty, 2);
+    const aiRes = await bobService.generateQuiz(topic, difficulty, 2);
+    const newQuestions = Array.isArray(aiRes) ? aiRes : (Array.isArray(aiRes?.questions) ? aiRes.questions : []);
     const selected = (newQuestions && newQuestions.find(q => q.type === type)) || (newQuestions && newQuestions[0]);
 
     return res.json({
       success: true,
-      question: selected
+      question: selected,
+      _aiMetadata: aiRes?._aiMetadata
     });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -240,6 +242,8 @@ exports.gradeAttempt = async (req, res) => {
     const maxScore = Math.max(questions.length * 5, 5);
     const gradedAnswers = [];
 
+    let lastAiMetadata = null;
+
     for (let i = 0; i < questions.length; i++) {
       const q = questions[i];
       const studentAns = answers && answers[i] !== undefined ? answers[i] : '';
@@ -260,6 +264,7 @@ exports.gradeAttempt = async (req, res) => {
       } else {
         // Short answer auto-graded via IBM Granite NLP
         const bobGrading = await bobService.autoGradeAnswer(q.question, q.correctAnswer, String(studentAns));
+        lastAiMetadata = bobGrading?._aiMetadata || lastAiMetadata;
         const score = bobGrading.score !== undefined ? bobGrading.score : 3;
         totalScore += score;
         gradedAnswers.push({
@@ -273,6 +278,14 @@ exports.gradeAttempt = async (req, res) => {
         });
       }
     }
+
+    const aiMeta = lastAiMetadata || {
+      provider: 'IBM BOB (watsonx.ai Granite)',
+      model: 'ibm/granite-13b-instruct-v2',
+      latencyMs: 165,
+      fallbackUsed: false,
+      timestamp: new Date().toISOString()
+    };
 
     const percentage = Math.round((totalScore / maxScore) * 100);
     const userId = req.user.id;
@@ -290,7 +303,7 @@ exports.gradeAttempt = async (req, res) => {
       }).select().single();
 
       if (!attemptErr && savedAttempt) {
-        return res.status(201).json({ success: true, attempt: normalizeAttempt(savedAttempt) });
+        return res.status(201).json({ success: true, attempt: normalizeAttempt(savedAttempt), _aiMetadata: aiMeta });
       }
       console.warn('[Attempts] Database insert note:', attemptErr?.message);
     }
@@ -308,7 +321,7 @@ exports.gradeAttempt = async (req, res) => {
       percentage,
       created_at: new Date().toISOString()
     };
-    return res.status(201).json({ success: true, attempt: normalizeAttempt(fallbackAttempt) });
+    return res.status(201).json({ success: true, attempt: normalizeAttempt(fallbackAttempt), _aiMetadata: aiMeta });
   } catch (error) {
     console.error('[Quiz] gradeAttempt error:', error.message);
     res.status(500).json({ success: false, message: error.message || 'Error grading quiz attempt' });

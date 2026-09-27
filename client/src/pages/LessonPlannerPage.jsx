@@ -19,6 +19,7 @@ import {
   Trash2
 } from 'lucide-react';
 import { generateLessonPlan, updateLessonPlan, translateLessonPlan, getLessons } from '../services/api';
+import AIEvidenceBadge from '../components/AIEvidenceBadge';
 
 export default function LessonPlannerPage() {
   const [subject, setSubject] = useState('Class 10 Science & Technology');
@@ -32,6 +33,7 @@ export default function LessonPlannerPage() {
   const [translating, setTranslating] = useState(false);
   const [currentPlan, setCurrentPlan] = useState(null);
   const [translatedText, setTranslatedText] = useState('');
+  const [aiMetadata, setAiMetadata] = useState(null);
   
   // Edit mode state
   const [isEditing, setIsEditing] = useState(false);
@@ -79,6 +81,7 @@ export default function LessonPlannerPage() {
       if (res.data.success) {
         setCurrentPlan(res.data.lesson);
         setEditedPlan(JSON.parse(JSON.stringify(res.data.lesson)));
+        if (res.data._aiMetadata) setAiMetadata(res.data._aiMetadata);
       }
     } catch (err) {
       alert('Error generating lesson plan: ' + (err.response?.data?.message || err.message));
@@ -271,6 +274,9 @@ export default function LessonPlannerPage() {
           {currentPlan ? (
             <div className="glass-card p-6 rounded-3xl border border-slate-800 space-y-6">
               
+              {/* AI Evidence Badge */}
+              <AIEvidenceBadge metadata={aiMetadata} />
+
               {/* Header Info */}
               <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-800 pb-4 gap-3">
                 <div className="space-y-1">

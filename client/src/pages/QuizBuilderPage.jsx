@@ -14,6 +14,7 @@ import {
   Check
 } from 'lucide-react';
 import { generateQuiz, getQuizzes, updateQuiz, regenerateQuestion } from '../services/api';
+import AIEvidenceBadge from '../components/AIEvidenceBadge';
 
 export default function QuizBuilderPage() {
   const [topic, setTopic] = useState('Photosynthesis & Cellular Respiration');
@@ -23,6 +24,7 @@ export default function QuizBuilderPage() {
   const [quizzes, setQuizzes] = useState([]);
   const [activeQuiz, setActiveQuiz] = useState(null);
   const [publishedSuccess, setPublishedSuccess] = useState(false);
+  const [aiMetadata, setAiMetadata] = useState(null);
   
   // Edit states
   const [isEditing, setIsEditing] = useState(false);
@@ -58,6 +60,7 @@ export default function QuizBuilderPage() {
         setActiveQuiz(res.data.quiz);
         setEditedQuiz(JSON.parse(JSON.stringify(res.data.quiz)));
         setQuizzes([res.data.quiz, ...quizzes]);
+        if (res.data._aiMetadata) setAiMetadata(res.data._aiMetadata);
       }
     } catch (err) {
       alert('Error generating quiz: ' + (err.response?.data?.message || err.message));
@@ -91,6 +94,7 @@ export default function QuizBuilderPage() {
         const updatedQuestions = [...editedQuiz.questions];
         updatedQuestions[idx] = res.data.question;
         setEditedQuiz({ ...editedQuiz, questions: updatedQuestions });
+        if (res.data._aiMetadata) setAiMetadata(res.data._aiMetadata);
       }
     } catch (err) {
       alert('Error regenerating question: ' + (err.response?.data?.message || err.message));
@@ -292,6 +296,9 @@ export default function QuizBuilderPage() {
           {activeQuiz ? (
             <div className="glass-card p-6 rounded-3xl border border-slate-800 space-y-6">
               
+              {/* AI Evidence Badge */}
+              <AIEvidenceBadge metadata={aiMetadata} />
+
               <div className="flex items-center justify-between border-b border-slate-800 pb-4">
                 <div>
                   <span className="px-2.5 py-0.5 rounded-full bg-purple-500/10 text-purple-300 border border-purple-500/20 text-[10px] font-bold uppercase">

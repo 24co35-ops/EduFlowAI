@@ -17,12 +17,12 @@ class BobServiceWrapper {
 
   async generateQuiz(topic, difficulty = 'medium', questionCount = 4, grade = 'Class 10') {
     const res = await aiService.generateQuiz(topic, difficulty, questionCount, grade);
-    return res.questions || [];
+    return res;
   }
 
   async solveDoubt(userQuestion, chatHistory = [], syllabusScope = 'Class 10 Science') {
     const res = await aiService.solveDoubt(userQuestion, chatHistory, syllabusScope);
-    return res.reply || 'EduFlow AI Tutor: Concept explained within syllabus guidelines.';
+    return res;
   }
 
   async generateFlashcards(chapterText, title = 'Study Deck') {
