@@ -12,8 +12,8 @@ const aiLimiter = rateLimit({
   message: { success: false, message: 'Too many AI generation requests. Please wait 15 minutes before trying again.' }
 });
 
-router.post('/flashcards/generate', protect, requireRole('student'), aiLimiter, studentController.generateFlashcards);
-router.get('/flashcards', protect, requireRole('student'), studentController.getFlashcards);
+router.post('/flashcards/generate', protect, aiLimiter, studentController.generateFlashcards);
+router.get('/flashcards', protect, studentController.getFlashcards);
 router.get('/progress', protect, requireRole('student'), studentController.getStudentProgress);
 router.get('/analytics', protect, requireRole('teacher'), studentController.getTeacherAnalytics);
 router.post('/doubt', protect, aiLimiter, studentController.solveDoubt);

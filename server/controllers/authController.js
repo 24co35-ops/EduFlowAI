@@ -12,7 +12,7 @@ const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 // ---------------------------------------------------------------------------
 const memoryUsers = [
   {
-    id: 'demo-teacher-1',
+    id: 'd0000000-0000-4000-a000-000000000001',
     name: 'Anita Sharma',
     email: 'teacher@eduflow.ai',
     passwordHash: bcrypt.hashSync('teacher123', 10),
@@ -21,7 +21,7 @@ const memoryUsers = [
     grade: 'Class 10'
   },
   {
-    id: 'demo-student-1',
+    id: 'd0000000-0000-4000-a000-000000000002',
     name: 'Rohan Gupta',
     email: 'student@eduflow.ai',
     passwordHash: bcrypt.hashSync('student123', 10),
@@ -129,7 +129,7 @@ exports.register = async (req, res) => {
 
     const passwordHash = await bcrypt.hash(password, 10);
     const newMemUser = {
-      id: 'user-' + Date.now(),
+      id: crypto.randomUUID(),
       name: name.trim(),
       email: cleanEmail,
       passwordHash,
