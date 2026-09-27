@@ -75,8 +75,8 @@ exports.register = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Invalid email address format.' });
     }
 
-    if (password.length < 6) {
-      return res.status(400).json({ success: false, message: 'Password must be at least 6 characters long.' });
+    if (password.length < 8) {
+      return res.status(400).json({ success: false, message: 'Password must be at least 8 characters long.' });
     }
 
     const assignedRole = role === 'student' ? 'student' : 'teacher';
@@ -100,7 +100,10 @@ exports.register = async (req, res) => {
         // Surface real Supabase error messages to the frontend
         const msg = signUpError.message || 'Registration failed.';
         const isDuplicate = msg.toLowerCase().includes('already') || msg.toLowerCase().includes('duplicate') || signUpError.status === 422;
-        return res.status(isDuplicate ? 400 : 500).json({ success: false, message: isDuplicate ? 'An account with that email already exists.' : msg });
+        return res.status(isDuplicate ? 400 : 500).json({
+          success: false,
+          message: isDuplicate ? 'User with this email already exists.' : msg
+        });
       }
 
       const userId = authData.user.id;
@@ -133,7 +136,7 @@ exports.register = async (req, res) => {
 
     const existingMem = memoryUsers.find(u => u.email === cleanEmail);
     if (existingMem) {
-      return res.status(400).json({ success: false, message: 'An account with that email already exists.' });
+      return res.status(400).json({ success: false, message: 'User with this email already exists.' });
     }
 
     const passwordHash = await bcrypt.hash(password, 10);

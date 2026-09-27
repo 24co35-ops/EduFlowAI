@@ -56,10 +56,15 @@ export function LoginPage({ setUser }) {
       }
     } catch (err) {
       const msg = err.response?.data?.message;
+      const status = err.response?.status;
       if (msg) {
         setError(msg);
+      } else if (status === 500) {
+        setError('Server error. Please try again later.');
       } else if (err.message === 'Network Error' || !err.response) {
-        setError('Cannot reach server. Please check your internet connection.');
+        setError('Cannot reach server. Is the backend running?');
+      } else if (status) {
+        setError(`Error (${status}): ${err.message || 'Login failed.'}`);
       } else {
         setError('Login failed. Please check your credentials.');
       }
@@ -247,8 +252,8 @@ export function RegisterPage({ setUser }) {
       setError('Password is required.');
       return;
     }
-    if (password.length < 6) {
-      setError('Password must be at least 6 characters long.');
+    if (password.length < 8) {
+      setError('Password must be at least 8 characters long.');
       return;
     }
 
@@ -272,10 +277,15 @@ export function RegisterPage({ setUser }) {
       }
     } catch (err) {
       const msg = err.response?.data?.message;
+      const status = err.response?.status;
       if (msg) {
         setError(msg);
+      } else if (status === 500) {
+        setError('Server error. Please try again later.');
       } else if (err.message === 'Network Error' || !err.response) {
-        setError('Cannot reach server. Please check your internet connection.');
+        setError('Cannot reach server. Is the backend running?');
+      } else if (status) {
+        setError(`Error (${status}): ${err.message || 'Registration failed.'}`);
       } else {
         setError('Registration failed. Please try again.');
       }
@@ -369,7 +379,7 @@ export function RegisterPage({ setUser }) {
 
           {/* Password with Show/Hide Toggle */}
           <div>
-            <label className="block text-xs font-medium text-slate-300 mb-1">Password (min 6 chars)</label>
+            <label className="block text-xs font-medium text-slate-300 mb-1">Password (min 8 chars)</label>
             <div className="relative">
               <Lock className="w-4 h-4 text-slate-500 absolute left-3 top-3.5 pointer-events-none" />
               <input
@@ -377,7 +387,7 @@ export function RegisterPage({ setUser }) {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                minLength={6}
+                minLength={8}
                 disabled={loading}
                 className="w-full pl-9 pr-10 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-white text-xs focus:outline-none focus:border-indigo-500 transition-colors disabled:opacity-50"
                 placeholder="••••••••"

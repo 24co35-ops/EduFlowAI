@@ -208,21 +208,21 @@ async function runTests() {
     console.log('  -> PASS: Teacher and Student registration successfully creates user, profile and JWT');
 
     // Test 13: Registration validation & duplicate error surfacing
-    console.log('Test 13: Verifying registration validation and duplicate email error handling...');
+    console.log('Test 13: Verifying registration validation (8 chars minimum) and duplicate email error handling...');
     let shortPassFailed = false;
     try {
       await axios.post(`${baseUrl}/auth/register`, {
         name: 'Short Pass User',
         email: `short_${Date.now()}@eduflow.ai`,
-        password: '123', // < 6 chars
+        password: '123456', // 6 chars (must fail since min is 8)
         role: 'student'
       });
     } catch (err) {
       assert.strictEqual(err.response?.status, 400);
-      assert.ok(err.response?.data?.message.includes('6 characters'));
+      assert.ok(err.response?.data?.message.includes('8 characters'), 'Error should specify at least 8 characters');
       shortPassFailed = true;
     }
-    assert.strictEqual(shortPassFailed, true, 'Short password should be rejected with 400');
+    assert.strictEqual(shortPassFailed, true, 'Short password (6 chars) should be rejected with 400');
 
     let duplicateFailed = false;
     try {
@@ -234,11 +234,11 @@ async function runTests() {
       });
     } catch (err) {
       assert.strictEqual(err.response?.status, 400);
-      assert.ok(err.response?.data?.message.includes('already exists'));
+      assert.ok(err.response?.data?.message.includes('User with this email already exists'), 'Error should match exact duplicate message');
       duplicateFailed = true;
     }
     assert.strictEqual(duplicateFailed, true, 'Duplicate email should be rejected with 400');
-    console.log('  -> PASS: Password length enforcement and duplicate email errors surfaced accurately');
+    console.log('  -> PASS: 8-character password length enforcement and duplicate email errors surfaced accurately');
 
     console.log('\n==================================================');
     console.log('🎉 MASTER TEST SUITE: ALL 13 TESTS PASSED PERFECTLY!');
