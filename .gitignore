@@ -6,6 +6,8 @@ client/node_modules/
 # Production builds
 client/dist/
 dist/
+build/
+client/build/
 
 # Environment files & Secrets
 .env

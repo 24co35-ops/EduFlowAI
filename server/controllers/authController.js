@@ -341,30 +341,3 @@ exports.resetPassword = async (req, res) => {
     return res.status(500).json({ success: false, message: error.message });
   }
 };
-
-// ---------------------------------------------------------------------------
-// DEBUG EMAIL TEST — TEMPORARY, remove after diagnosing the email issue
-// ---------------------------------------------------------------------------
-exports.debugEmailTest = async (req, res) => {
-  const resendKey = process.env.RESEND_API_KEY;
-  console.log('[DebugEmail] RESEND_API_KEY:', resendKey ? `SET (${resendKey.slice(0, 4)}...)` : 'NOT SET');
-  console.log('[DebugEmail] SMTP_FROM:', process.env.SMTP_FROM || 'NOT SET');
-
-  const to = req.query.to;
-  if (!to) {
-    return res.status(400).json({ success: false, message: 'Pass ?to=your@email.com to test.' });
-  }
-
-  try {
-    await sendResetEmail(to, 'https://example.com/test-reset-link');
-    return res.json({ success: true, message: 'Email sent — check inbox and Resend activity logs.' });
-  } catch (error) {
-    console.error('[DebugEmail] sendResetEmail failed:', error);
-    return res.status(500).json({
-      success: false,
-      error: error.message,
-      name: error.name,
-      stack: error.stack
-    });
-  }
-};

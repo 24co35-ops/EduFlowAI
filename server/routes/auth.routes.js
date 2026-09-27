@@ -8,6 +8,5 @@ router.post('/login', authController.login);
 router.get('/me', protect, authController.getMe);
 router.post('/forgot-password', authController.forgotPassword);
 router.post('/reset-password/:token', authController.resetPassword);
-router.get('/debug-email-test', authController.debugEmailTest); // TEMPORARY
 
 module.exports = router;
