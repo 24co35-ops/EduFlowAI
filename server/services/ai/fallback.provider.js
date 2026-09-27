@@ -35,9 +35,21 @@ class FallbackProvider extends BaseAIProvider {
         { contents: [{ parts: [{ text: promptText }] }] },
         { headers: { 'Content-Type': 'application/json' }, timeout: 12000 }
       );
-      return res.data?.candidates?.[0]?.content?.parts?.[0]?.text || null;
+
+      const candidate = res.data?.candidates?.[0];
+      // Gemini returns 200 but empty parts on safety blocks / MAX_TOKENS / recitation
+      if (!candidate) return null;
+      const finishReason = candidate.finishReason;
+      if (finishReason && finishReason !== 'STOP' && finishReason !== 'MAX_TOKENS') {
+        console.warn(`[FallbackProvider] Gemini blocked (finishReason=${finishReason}), using deterministic fallback`);
+        return null;
+      }
+      const text = candidate.content?.parts?.[0]?.text;
+      return text && text.trim() ? text : null;
     } catch (err) {
-      console.warn('[FallbackProvider] Gemini API warning:', err.message);
+      // Axios wraps Gemini 4xx errors; also catches network timeouts
+      const geminiMsg = err.response?.data?.error?.message || err.message;
+      console.warn('[FallbackProvider] Gemini API warning:', geminiMsg);
       return null;
     }
   }
