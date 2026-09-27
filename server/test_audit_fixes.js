@@ -179,8 +179,69 @@ async function runTests() {
     assert.strictEqual(typeof healthRes.data.telemetry.totalRequests, 'number');
     console.log(`  -> PASS: Health check reports ${healthRes.data.telemetry.totalRequests} telemetry requests recorded`);
 
+    // Test 12: End-to-End Registration (Teacher and Student)
+    console.log('Test 12: Verifying end-to-end registration for both Teacher and Student roles...');
+    const regTeacherEmail = `reg_teacher_${Date.now()}@eduflow.ai`;
+    const regTeacherRes = await axios.post(`${baseUrl}/auth/register`, {
+      name: 'Professor Priya Sharma',
+      email: regTeacherEmail,
+      password: 'securePassword123',
+      role: 'teacher',
+      institution: 'Delhi Public School'
+    });
+    assert.strictEqual(regTeacherRes.status, 201);
+    assert.strictEqual(regTeacherRes.data.success, true);
+    assert.strictEqual(regTeacherRes.data.user.role, 'teacher');
+    assert.ok(regTeacherRes.data.token, 'Registration should return signed JWT');
+
+    const regStudentEmail = `reg_student_${Date.now()}@eduflow.ai`;
+    const regStudentRes = await axios.post(`${baseUrl}/auth/register`, {
+      name: 'Aarav Patel',
+      email: regStudentEmail,
+      password: 'studentPassword123',
+      role: 'student',
+      institution: 'Delhi Public School'
+    });
+    assert.strictEqual(regStudentRes.status, 201);
+    assert.strictEqual(regStudentRes.data.success, true);
+    assert.strictEqual(regStudentRes.data.user.role, 'student');
+    console.log('  -> PASS: Teacher and Student registration successfully creates user, profile and JWT');
+
+    // Test 13: Registration validation & duplicate error surfacing
+    console.log('Test 13: Verifying registration validation and duplicate email error handling...');
+    let shortPassFailed = false;
+    try {
+      await axios.post(`${baseUrl}/auth/register`, {
+        name: 'Short Pass User',
+        email: `short_${Date.now()}@eduflow.ai`,
+        password: '123', // < 6 chars
+        role: 'student'
+      });
+    } catch (err) {
+      assert.strictEqual(err.response?.status, 400);
+      assert.ok(err.response?.data?.message.includes('6 characters'));
+      shortPassFailed = true;
+    }
+    assert.strictEqual(shortPassFailed, true, 'Short password should be rejected with 400');
+
+    let duplicateFailed = false;
+    try {
+      await axios.post(`${baseUrl}/auth/register`, {
+        name: 'Duplicate User',
+        email: regTeacherEmail,
+        password: 'anotherPassword123',
+        role: 'teacher'
+      });
+    } catch (err) {
+      assert.strictEqual(err.response?.status, 400);
+      assert.ok(err.response?.data?.message.includes('already exists'));
+      duplicateFailed = true;
+    }
+    assert.strictEqual(duplicateFailed, true, 'Duplicate email should be rejected with 400');
+    console.log('  -> PASS: Password length enforcement and duplicate email errors surfaced accurately');
+
     console.log('\n==================================================');
-    console.log('🎉 MASTER TEST SUITE: ALL 11 TESTS PASSED PERFECTLY!');
+    console.log('🎉 MASTER TEST SUITE: ALL 13 TESTS PASSED PERFECTLY!');
     console.log('==================================================\n');
   } finally {
     server.close();

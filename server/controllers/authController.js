@@ -177,6 +177,31 @@ exports.login = async (req, res) => {
       });
 
       if (signInError) {
+        // Auto-seed built-in demo accounts in Supabase if not yet provisioned
+        const isTeacherDemo = cleanEmail === 'teacher@eduflow.ai' && password === 'teacher123';
+        const isStudentDemo = cleanEmail === 'student@eduflow.ai' && password === 'student123';
+        if (isTeacherDemo || isStudentDemo) {
+          const demoRole = isTeacherDemo ? 'teacher' : 'student';
+          const demoName = isTeacherDemo ? 'Anita Sharma' : 'Rohan Gupta';
+          const { data: createdDemo, error: createError } = await supabase.auth.admin.createUser({
+            email: cleanEmail,
+            password,
+            email_confirm: true,
+            user_metadata: { full_name: demoName, role: demoRole, institution: 'Delhi Public School', grade: 'Class 10' }
+          });
+          if (!createError && createdDemo?.user) {
+            const user = {
+              id: createdDemo.user.id,
+              name: demoName,
+              email: cleanEmail,
+              role: demoRole,
+              institution: 'Delhi Public School',
+              grade: 'Class 10'
+            };
+            const token = generateToken(user);
+            return res.json({ success: true, token, user: safeUserPayload(user) });
+          }
+        }
         return res.status(401).json({ success: false, message: 'Invalid email or password.' });
       }
 

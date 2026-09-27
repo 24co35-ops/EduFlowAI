@@ -1,37 +1,75 @@
 import React, { useState } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
-import { Sparkles, User, Lock, Mail, Building, ArrowRight, KeyRound, CheckCircle } from 'lucide-react';
+import { 
+  Sparkles, 
+  User, 
+  Lock, 
+  Mail, 
+  Building, 
+  ArrowRight, 
+  KeyRound, 
+  CheckCircle,
+  Eye,
+  EyeOff,
+  Loader2,
+  AlertCircle
+} from 'lucide-react';
 import { loginUser, registerUser, forgotPassword, resetPassword } from '../services/api';
 
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+// ===========================================================================
+// LOGIN PAGE
+// ===========================================================================
 export function LoginPage({ setUser }) {
   const [email, setEmail] = useState('teacher@eduflow.ai');
   const [password, setPassword] = useState('teacher123');
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const navigate = useNavigate();
 
   const handleLogin = async (e) => {
     e.preventDefault();
-    setLoading(true);
     setError('');
+
+    const cleanEmail = email.trim();
+    if (!cleanEmail) {
+      setError('Email address is required.');
+      return;
+    }
+    if (!password) {
+      setError('Password is required.');
+      return;
+    }
+
+    setLoading(true);
     try {
-      const res = await loginUser({ email, password });
+      const res = await loginUser({ email: cleanEmail, password });
       if (res.data.success) {
         localStorage.setItem('eduflow_token', res.data.token);
         localStorage.setItem('eduflow_user', JSON.stringify(res.data.user));
         setUser(res.data.user);
         navigate('/');
       } else {
-        setError(res.data.message || 'Login failed. Invalid credentials.');
+        setError(res.data.message || 'Invalid email or password.');
       }
     } catch (err) {
-      setError(err.response?.data?.message || 'Login failed. Check your email and password.');
+      const msg = err.response?.data?.message;
+      if (msg) {
+        setError(msg);
+      } else if (err.message === 'Network Error' || !err.response) {
+        setError('Cannot reach server. Please check your internet connection.');
+      } else {
+        setError('Login failed. Please check your credentials.');
+      }
     } finally {
       setLoading(false);
     }
   };
 
   const setDemoRole = (role) => {
+    setError('');
     if (role === 'teacher') {
       setEmail('teacher@eduflow.ai');
       setPassword('teacher123');
@@ -45,13 +83,13 @@ export function LoginPage({ setUser }) {
     <div className="min-h-[85vh] flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full glass-card p-8 rounded-3xl border border-slate-800 shadow-2xl space-y-6">
         
-        {/* Title */}
+        {/* Header Branding */}
         <div className="text-center space-y-2">
-          <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-indigo-600/20 text-indigo-400 mb-2 border border-indigo-500/30">
+          <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-indigo-600/20 text-indigo-400 mb-2 border border-indigo-500/30 shadow-lg shadow-indigo-500/10">
             <Sparkles className="w-6 h-6 text-indigo-400" />
           </div>
           <h2 className="text-2xl font-bold text-white font-outfit">Welcome to EduFlow <span className="gradient-text">AI</span></h2>
-          <p className="text-xs text-slate-400">Powered by IBM watsonx.ai & Google Gemini</p>
+          <p className="text-xs text-slate-400">Intelligent Course Content Automation powered by IBM watsonx.ai</p>
         </div>
 
         {/* Demo Quick-Select Buttons */}
@@ -63,7 +101,7 @@ export function LoginPage({ setUser }) {
               onClick={() => setDemoRole('teacher')}
               className={`py-2 px-3 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition-all ${
                 email.includes('teacher') 
-                  ? 'bg-indigo-600 text-white shadow-md' 
+                  ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/25' 
                   : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
               }`}
             >
@@ -74,7 +112,7 @@ export function LoginPage({ setUser }) {
               onClick={() => setDemoRole('student')}
               className={`py-2 px-3 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition-all ${
                 email.includes('student') 
-                  ? 'bg-emerald-600 text-white shadow-md' 
+                  ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/25' 
                   : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
               }`}
             >
@@ -83,23 +121,27 @@ export function LoginPage({ setUser }) {
           </div>
         </div>
 
+        {/* Error Notification */}
         {error && (
-          <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs font-medium text-center">
-            {error}
+          <div className="p-3.5 rounded-xl bg-rose-500/10 border border-rose-500/25 text-rose-400 text-xs font-medium flex items-center gap-2 animate-fade-in">
+            <AlertCircle className="w-4 h-4 flex-shrink-0 text-rose-400" />
+            <span>{error}</span>
           </div>
         )}
 
+        {/* Form */}
         <form onSubmit={handleLogin} className="space-y-4">
           <div>
             <label className="block text-xs font-medium text-slate-300 mb-1">Email Address</label>
             <div className="relative">
-              <Mail className="w-4 h-4 text-slate-500 absolute left-3 top-3" />
+              <Mail className="w-4 h-4 text-slate-500 absolute left-3 top-3.5 pointer-events-none" />
               <input
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                className="w-full pl-9 pr-4 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-white text-xs focus:outline-none focus:border-indigo-500 transition-colors"
+                disabled={loading}
+                className="w-full pl-9 pr-4 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-white text-xs focus:outline-none focus:border-indigo-500 transition-colors disabled:opacity-50"
                 placeholder="teacher@eduflow.ai"
               />
             </div>
@@ -113,15 +155,25 @@ export function LoginPage({ setUser }) {
               </Link>
             </div>
             <div className="relative">
-              <Lock className="w-4 h-4 text-slate-500 absolute left-3 top-3" />
+              <Lock className="w-4 h-4 text-slate-500 absolute left-3 top-3.5 pointer-events-none" />
               <input
-                type="password"
+                type={showPassword ? 'text' : 'password'}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                className="w-full pl-9 pr-4 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-white text-xs focus:outline-none focus:border-indigo-500 transition-colors"
+                disabled={loading}
+                className="w-full pl-9 pr-10 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-white text-xs focus:outline-none focus:border-indigo-500 transition-colors disabled:opacity-50"
                 placeholder="••••••••"
               />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                tabIndex={-1}
+                className="absolute right-3 top-3 text-slate-500 hover:text-slate-300 transition-colors focus:outline-none"
+                aria-label={showPassword ? 'Hide password' : 'Show password'}
+              >
+                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
             </div>
           </div>
 
@@ -130,7 +182,12 @@ export function LoginPage({ setUser }) {
             disabled={loading}
             className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white text-xs font-bold shadow-lg shadow-indigo-600/30 flex items-center justify-center gap-2 transition-all disabled:opacity-50"
           >
-            {loading ? 'Authenticating...' : (
+            {loading ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin text-white" />
+                <span>Authenticating...</span>
+              </>
+            ) : (
               <>
                 <span>Sign In to Platform</span>
                 <ArrowRight className="w-4 h-4" />
@@ -153,10 +210,14 @@ export function LoginPage({ setUser }) {
   );
 }
 
+// ===========================================================================
+// REGISTER PAGE
+// ===========================================================================
 export function RegisterPage({ setUser }) {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [role, setRole] = useState('teacher');
   const [institution, setInstitution] = useState('EduFlow Academy');
   const [loading, setLoading] = useState(false);
@@ -165,45 +226,85 @@ export function RegisterPage({ setUser }) {
 
   const handleRegister = async (e) => {
     e.preventDefault();
-    if (!name.trim()) { setError('Full name is required.'); return; }
-    if (password.length < 6) { setError('Password must be at least 6 characters long.'); return; }
-    setLoading(true);
     setError('');
+
+    const cleanName = name.trim();
+    const cleanEmail = email.trim().toLowerCase();
+
+    if (!cleanName) {
+      setError('Full name is required.');
+      return;
+    }
+    if (!cleanEmail) {
+      setError('Email address is required.');
+      return;
+    }
+    if (!EMAIL_REGEX.test(cleanEmail)) {
+      setError('Please enter a valid email address.');
+      return;
+    }
+    if (!password) {
+      setError('Password is required.');
+      return;
+    }
+    if (password.length < 6) {
+      setError('Password must be at least 6 characters long.');
+      return;
+    }
+
+    setLoading(true);
     try {
-      const res = await registerUser({ name, email, password, role, institution });
+      const res = await registerUser({
+        name: cleanName,
+        email: cleanEmail,
+        password,
+        role,
+        institution: institution.trim() || 'EduFlow Academy'
+      });
+
       if (res.data.success) {
         localStorage.setItem('eduflow_token', res.data.token);
         localStorage.setItem('eduflow_user', JSON.stringify(res.data.user));
         setUser(res.data.user);
         navigate('/');
       } else {
-        setError(res.data.message || 'Registration failed. Please try again.');
+        setError(res.data.message || 'Registration failed. Please check your information.');
       }
     } catch (err) {
       const msg = err.response?.data?.message;
-      setError(msg || (err.message === 'Network Error' ? 'Cannot reach server. Please check your connection.' : 'Registration failed. Please try again.'));
+      if (msg) {
+        setError(msg);
+      } else if (err.message === 'Network Error' || !err.response) {
+        setError('Cannot reach server. Please check your internet connection.');
+      } else {
+        setError('Registration failed. Please try again.');
+      }
     } finally {
       setLoading(false);
     }
   };
-
 
   return (
     <div className="min-h-[85vh] flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full glass-card p-8 rounded-3xl border border-slate-800 shadow-2xl space-y-6">
         
         <div className="text-center space-y-2">
+          <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-indigo-600/20 text-indigo-400 mb-2 border border-indigo-500/30 shadow-lg shadow-indigo-500/10">
+            <Sparkles className="w-6 h-6 text-indigo-400" />
+          </div>
           <h2 className="text-2xl font-bold text-white font-outfit">Create Your Account</h2>
-          <p className="text-xs text-slate-400">Join EduFlow AI to automate course creation</p>
+          <p className="text-xs text-slate-400">Join EduFlow AI to automate course creation and learning</p>
         </div>
 
         {error && (
-          <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs font-medium text-center">
-            {error}
+          <div className="p-3.5 rounded-xl bg-rose-500/10 border border-rose-500/25 text-rose-400 text-xs font-medium flex items-center gap-2 animate-fade-in">
+            <AlertCircle className="w-4 h-4 flex-shrink-0 text-rose-400" />
+            <span>{error}</span>
           </div>
         )}
 
         <form onSubmit={handleRegister} className="space-y-4">
+          {/* Role Selection */}
           <div>
             <label className="block text-xs font-medium text-slate-300 mb-1">Select Role</label>
             <div className="grid grid-cols-2 gap-3">
@@ -212,8 +313,8 @@ export function RegisterPage({ setUser }) {
                 onClick={() => setRole('teacher')}
                 className={`py-2 px-3 rounded-xl text-xs font-bold border transition-all ${
                   role === 'teacher'
-                    ? 'bg-indigo-600 text-white border-indigo-500 shadow-md'
-                    : 'bg-slate-900 text-slate-400 border-slate-800'
+                    ? 'bg-indigo-600 text-white border-indigo-500 shadow-md shadow-indigo-600/25'
+                    : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-slate-200'
                 }`}
               >
                 👩‍🏫 Teacher / Educator
@@ -223,8 +324,8 @@ export function RegisterPage({ setUser }) {
                 onClick={() => setRole('student')}
                 className={`py-2 px-3 rounded-xl text-xs font-bold border transition-all ${
                   role === 'student'
-                    ? 'bg-emerald-600 text-white border-emerald-500 shadow-md'
-                    : 'bg-slate-900 text-slate-400 border-slate-800'
+                    ? 'bg-emerald-600 text-white border-emerald-500 shadow-md shadow-emerald-600/25'
+                    : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-slate-200'
                 }`}
               >
                 🧑‍🎓 Student
@@ -232,61 +333,78 @@ export function RegisterPage({ setUser }) {
             </div>
           </div>
 
+          {/* Full Name */}
           <div>
             <label className="block text-xs font-medium text-slate-300 mb-1">Full Name</label>
             <div className="relative">
-              <User className="w-4 h-4 text-slate-500 absolute left-3 top-3" />
+              <User className="w-4 h-4 text-slate-500 absolute left-3 top-3.5 pointer-events-none" />
               <input
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 required
-                className="w-full pl-9 pr-4 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-white text-xs focus:outline-none focus:border-indigo-500"
-                placeholder="Dr. Anita Sharma"
+                disabled={loading}
+                className="w-full pl-9 pr-4 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-white text-xs focus:outline-none focus:border-indigo-500 transition-colors disabled:opacity-50"
+                placeholder={role === 'teacher' ? 'Dr. Anita Sharma' : 'Rohan Gupta'}
               />
             </div>
           </div>
 
+          {/* Email */}
           <div>
             <label className="block text-xs font-medium text-slate-300 mb-1">Email Address</label>
             <div className="relative">
-              <Mail className="w-4 h-4 text-slate-500 absolute left-3 top-3" />
+              <Mail className="w-4 h-4 text-slate-500 absolute left-3 top-3.5 pointer-events-none" />
               <input
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                className="w-full pl-9 pr-4 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-white text-xs focus:outline-none focus:border-indigo-500"
-                placeholder="anita@school.edu"
+                disabled={loading}
+                className="w-full pl-9 pr-4 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-white text-xs focus:outline-none focus:border-indigo-500 transition-colors disabled:opacity-50"
+                placeholder="you@school.edu"
               />
             </div>
           </div>
 
+          {/* Password with Show/Hide Toggle */}
           <div>
             <label className="block text-xs font-medium text-slate-300 mb-1">Password (min 6 chars)</label>
             <div className="relative">
-              <Lock className="w-4 h-4 text-slate-500 absolute left-3 top-3" />
+              <Lock className="w-4 h-4 text-slate-500 absolute left-3 top-3.5 pointer-events-none" />
               <input
-                type="password"
+                type={showPassword ? 'text' : 'password'}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 minLength={6}
-                className="w-full pl-9 pr-4 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-white text-xs focus:outline-none focus:border-indigo-500"
+                disabled={loading}
+                className="w-full pl-9 pr-10 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-white text-xs focus:outline-none focus:border-indigo-500 transition-colors disabled:opacity-50"
                 placeholder="••••••••"
               />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                tabIndex={-1}
+                className="absolute right-3 top-3 text-slate-500 hover:text-slate-300 transition-colors focus:outline-none"
+                aria-label={showPassword ? 'Hide password' : 'Show password'}
+              >
+                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
             </div>
           </div>
 
+          {/* Institution */}
           <div>
             <label className="block text-xs font-medium text-slate-300 mb-1">School / Institution</label>
             <div className="relative">
-              <Building className="w-4 h-4 text-slate-500 absolute left-3 top-3" />
+              <Building className="w-4 h-4 text-slate-500 absolute left-3 top-3.5 pointer-events-none" />
               <input
                 type="text"
                 value={institution}
                 onChange={(e) => setInstitution(e.target.value)}
-                className="w-full pl-9 pr-4 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-white text-xs focus:outline-none focus:border-indigo-500"
+                disabled={loading}
+                className="w-full pl-9 pr-4 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-white text-xs focus:outline-none focus:border-indigo-500 transition-colors disabled:opacity-50"
                 placeholder="EduFlow Academy"
               />
             </div>
@@ -295,9 +413,19 @@ export function RegisterPage({ setUser }) {
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 text-white text-xs font-bold shadow-lg shadow-indigo-600/30 flex items-center justify-center gap-2 transition-all"
+            className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white text-xs font-bold shadow-lg shadow-indigo-600/30 flex items-center justify-center gap-2 transition-all disabled:opacity-50"
           >
-            {loading ? 'Creating Account...' : 'Register Account'}
+            {loading ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin text-white" />
+                <span>Creating Account...</span>
+              </>
+            ) : (
+              <>
+                <span>Register Account</span>
+                <ArrowRight className="w-4 h-4" />
+              </>
+            )}
           </button>
         </form>
 
@@ -315,6 +443,9 @@ export function RegisterPage({ setUser }) {
   );
 }
 
+// ===========================================================================
+// FORGOT PASSWORD PAGE
+// ===========================================================================
 export function ForgotPasswordPage() {
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
@@ -327,7 +458,7 @@ export function ForgotPasswordPage() {
     setError('');
     setMessage('');
     try {
-      const res = await forgotPassword(email);
+      const res = await forgotPassword(email.trim());
       setMessage(res.data.message);
     } catch (err) {
       setError(err.response?.data?.message || 'Something went wrong. Please try again.');
@@ -349,8 +480,9 @@ export function ForgotPasswordPage() {
         </div>
 
         {error && (
-          <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs font-medium text-center">
-            {error}
+          <div className="p-3.5 rounded-xl bg-rose-500/10 border border-rose-500/25 text-rose-400 text-xs font-medium flex items-center gap-2 animate-fade-in">
+            <AlertCircle className="w-4 h-4 flex-shrink-0 text-rose-400" />
+            <span>{error}</span>
           </div>
         )}
 
@@ -359,7 +491,7 @@ export function ForgotPasswordPage() {
             <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-medium text-center flex flex-col items-center gap-2">
               <CheckCircle className="w-6 h-6" />
               <span>{message}</span>
-              <span className="text-slate-400">Check your inbox (or the server console in demo mode).</span>
+              <span className="text-slate-400">Check your inbox for password reset instructions.</span>
             </div>
             <Link to="/login" className="block w-full py-3 px-4 rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 text-white text-xs font-bold text-center shadow-lg shadow-indigo-600/30 transition-all hover:opacity-90">
               Back to Sign In
@@ -370,14 +502,15 @@ export function ForgotPasswordPage() {
             <div>
               <label className="block text-xs font-medium text-slate-300 mb-1">Email Address</label>
               <div className="relative">
-                <Mail className="w-4 h-4 text-slate-500 absolute left-3 top-3" />
+                <Mail className="w-4 h-4 text-slate-500 absolute left-3 top-3.5 pointer-events-none" />
                 <input
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
                   autoFocus
-                  className="w-full pl-9 pr-4 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-white text-xs focus:outline-none focus:border-indigo-500 transition-colors"
+                  disabled={loading}
+                  className="w-full pl-9 pr-4 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-white text-xs focus:outline-none focus:border-indigo-500 transition-colors disabled:opacity-50"
                   placeholder="you@school.edu"
                 />
               </div>
@@ -388,7 +521,17 @@ export function ForgotPasswordPage() {
               disabled={loading}
               className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white text-xs font-bold shadow-lg shadow-indigo-600/30 flex items-center justify-center gap-2 transition-all disabled:opacity-50"
             >
-              {loading ? 'Sending...' : (<><span>Send Reset Link</span><ArrowRight className="w-4 h-4" /></>)}
+              {loading ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin text-white" />
+                  <span>Sending...</span>
+                </>
+              ) : (
+                <>
+                  <span>Send Reset Link</span>
+                  <ArrowRight className="w-4 h-4" />
+                </>
+              )}
             </button>
 
             <div className="text-center">
@@ -404,11 +547,15 @@ export function ForgotPasswordPage() {
   );
 }
 
+// ===========================================================================
+// RESET PASSWORD PAGE
+// ===========================================================================
 export function ResetPasswordPage() {
   const { token } = useParams();
   const navigate = useNavigate();
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
@@ -419,8 +566,8 @@ export function ResetPasswordPage() {
       setError('Passwords do not match.');
       return;
     }
-    if (password.length < 8) {
-      setError('Password must be at least 8 characters.');
+    if (password.length < 6) {
+      setError('Password must be at least 6 characters long.');
       return;
     }
     setLoading(true);
@@ -445,12 +592,13 @@ export function ResetPasswordPage() {
             <KeyRound className="w-6 h-6 text-indigo-400" />
           </div>
           <h2 className="text-2xl font-bold text-white font-outfit">Set New Password</h2>
-          <p className="text-xs text-slate-400">Choose a strong password for your account</p>
+          <p className="text-xs text-slate-400">Choose a strong password (minimum 6 characters)</p>
         </div>
 
         {error && (
-          <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs font-medium text-center">
-            {error}
+          <div className="p-3.5 rounded-xl bg-rose-500/10 border border-rose-500/25 text-rose-400 text-xs font-medium flex items-center gap-2 animate-fade-in">
+            <AlertCircle className="w-4 h-4 flex-shrink-0 text-rose-400" />
+            <span>{error}</span>
           </div>
         )}
 
@@ -465,30 +613,41 @@ export function ResetPasswordPage() {
             <div>
               <label className="block text-xs font-medium text-slate-300 mb-1">New Password</label>
               <div className="relative">
-                <Lock className="w-4 h-4 text-slate-500 absolute left-3 top-3" />
+                <Lock className="w-4 h-4 text-slate-500 absolute left-3 top-3.5 pointer-events-none" />
                 <input
-                  type="password"
+                  type={showPassword ? 'text' : 'password'}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
-                  minLength={8}
+                  minLength={6}
                   autoFocus
-                  className="w-full pl-9 pr-4 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-white text-xs focus:outline-none focus:border-indigo-500 transition-colors"
-                  placeholder="Min. 8 characters"
+                  disabled={loading}
+                  className="w-full pl-9 pr-10 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-white text-xs focus:outline-none focus:border-indigo-500 transition-colors disabled:opacity-50"
+                  placeholder="Min. 6 characters"
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  tabIndex={-1}
+                  className="absolute right-3 top-3 text-slate-500 hover:text-slate-300 transition-colors focus:outline-none"
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                >
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
               </div>
             </div>
 
             <div>
               <label className="block text-xs font-medium text-slate-300 mb-1">Confirm Password</label>
               <div className="relative">
-                <Lock className="w-4 h-4 text-slate-500 absolute left-3 top-3" />
+                <Lock className="w-4 h-4 text-slate-500 absolute left-3 top-3.5 pointer-events-none" />
                 <input
-                  type="password"
+                  type={showPassword ? 'text' : 'password'}
                   value={confirm}
                   onChange={(e) => setConfirm(e.target.value)}
                   required
-                  className={`w-full pl-9 pr-4 py-2.5 rounded-xl bg-slate-900 border text-white text-xs focus:outline-none transition-colors ${
+                  disabled={loading}
+                  className={`w-full pl-9 pr-4 py-2.5 rounded-xl bg-slate-900 border text-white text-xs focus:outline-none transition-colors disabled:opacity-50 ${
                     confirm && confirm !== password
                       ? 'border-rose-500 focus:border-rose-500'
                       : 'border-slate-800 focus:border-indigo-500'
@@ -506,7 +665,17 @@ export function ResetPasswordPage() {
               disabled={loading || (confirm && confirm !== password)}
               className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white text-xs font-bold shadow-lg shadow-indigo-600/30 flex items-center justify-center gap-2 transition-all disabled:opacity-50"
             >
-              {loading ? 'Resetting...' : (<><span>Reset Password</span><ArrowRight className="w-4 h-4" /></>)}
+              {loading ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin text-white" />
+                  <span>Resetting...</span>
+                </>
+              ) : (
+                <>
+                  <span>Reset Password</span>
+                  <ArrowRight className="w-4 h-4" />
+                </>
+              )}
             </button>
           </form>
         )}
