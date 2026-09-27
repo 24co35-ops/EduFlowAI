@@ -26,5 +26,7 @@ if (createClient && SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY) {
 }
 
 const isSupabaseConfigured = () => Boolean(supabase);
+// TEMP DEBUG
+console.log('[Config] isSupabaseConfigured:', isSupabaseConfigured(), '| SUPABASE_URL set:', Boolean(SUPABASE_URL), '| SUPABASE_SERVICE_ROLE_KEY set:', Boolean(SUPABASE_SERVICE_ROLE_KEY));
 
 module.exports = { supabase, isSupabaseConfigured };

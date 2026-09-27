@@ -55,6 +55,8 @@ const safeUserPayload = (user) => ({
 // ---------------------------------------------------------------------------
 exports.register = async (req, res) => {
   try {
+    // TEMP DEBUG
+    console.log('[Register] Using backend:', isSupabaseConfigured() ? 'Supabase' : 'IN-MEMORY (not persistent!)');
     const { name, email, password, role, institution, grade } = req.body;
 
     if (!name || !email || !password) {
@@ -153,6 +155,8 @@ exports.register = async (req, res) => {
 // ---------------------------------------------------------------------------
 exports.login = async (req, res) => {
   try {
+    // TEMP DEBUG
+    console.log('[Login] Using backend:', isSupabaseConfigured() ? 'Supabase' : 'IN-MEMORY (not persistent!)');
     const { email, password, role } = req.body;
     if (!email || !password) {
       return res.status(400).json({ success: false, message: 'Email and password are required.' });
