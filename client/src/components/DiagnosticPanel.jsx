@@ -92,12 +92,12 @@ export default function DiagnosticPanel({ isOpen, onClose }) {
                 <Database className="w-4 h-4 text-blue-400" />
               </div>
               <p className="text-xs font-bold text-white">
-                {healthData?.databaseConnected ? 'MongoDB Cluster' : 'In-Memory Store'}
+                {healthData?.databaseConnected ? 'Supabase Postgres' : 'In-Memory Store'}
               </p>
               <div className="flex items-center gap-1.5 text-[11px]">
                 <span className={`w-2 h-2 rounded-full ${healthData?.databaseConnected ? 'bg-emerald-400' : 'bg-indigo-400'}`} />
                 <span className="text-slate-300">
-                  {healthData?.databaseConnected ? 'Persistent Live Connection' : 'Zero-Setup Local Mode'}
+                  {healthData?.databaseConnected ? 'Supabase Cloud Auth & Database' : 'Zero-Setup Local Dev Mode'}
                 </span>
               </div>
             </div>

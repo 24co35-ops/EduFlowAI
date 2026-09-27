@@ -175,7 +175,7 @@ export function RegisterPage({ setUser }) {
         localStorage.setItem('eduflow_token', res.data.token);
         localStorage.setItem('eduflow_user', JSON.stringify(res.data.user));
         setUser(res.data.user);
-        navigate(res.data.user.role === 'student' ? '/student' : '/');
+        navigate('/');
       } else {
         setError(res.data.message || 'Registration failed. Please try again.');
       }
