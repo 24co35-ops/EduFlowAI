@@ -99,7 +99,9 @@ EduFlow AI utilizes real IBM watsonx.ai Granite models via a modular provider la
 ### Supabase Setup (one-time)
 
 1. Create a project at [supabase.com](https://supabase.com).
-2. In your project dashboard go to **SQL Editor → New query**, paste the contents of [`supabase/migrations/001_profiles.sql`](supabase/migrations/001_profiles.sql) and run it.
+2. In your project dashboard go to **SQL Editor → New query**, and run the migrations:
+   - Run [`supabase/migrations/001_profiles.sql`](supabase/migrations/001_profiles.sql) (creates `profiles` table + auto-provisioning trigger)
+   - Run [`supabase/migrations/002_app_tables.sql`](supabase/migrations/002_app_tables.sql) (creates `lessons`, `quizzes`, `attempts`, `flashcards` tables + RLS policies)
 3. Go to **Project Settings → API** and copy:
    - **Project URL** → `SUPABASE_URL`
    - **service_role secret** → `SUPABASE_SERVICE_ROLE_KEY`

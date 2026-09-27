@@ -1,156 +1,94 @@
-const Quiz = require('../models/Quiz');
-const Attempt = require('../models/Attempt');
+const { supabase, isSupabaseConfigured } = require('../config/supabase');
 const bobService = require('../services/bob.service');
-const { getIsConnected } = require('../config/db');
 
-const IS_PRODUCTION = process.env.NODE_ENV === 'production';
+const dbErr = (res, err) =>
+  res.status(500).json({ success: false, message: err.message || 'Database error.' });
 
-// Helper: return 503 when DB is unavailable in production.
-const dbUnavailable = (res) =>
-  res.status(503).json({
-    success: false,
-    message: 'Service temporarily unavailable. Database connection required in production.'
-  });
+const noDb = (res) =>
+  res.status(503).json({ success: false, message: 'Supabase not configured. Set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in Vercel env vars.' });
 
-// Memory store fallback (development / demo mode only)
-const memoryQuizzes = IS_PRODUCTION ? [] : [
-  {
-    _id: 'quiz-demo-1',
-    teacherId: 'demo-teacher-1',
-    topic: 'Photosynthesis & Plant Energy',
-    difficulty: 'medium',
-    status: 'published',
-    assignedGrade: 'Class 10',
-    questions: [
-      {
-        question: 'Which cellular organelle is the primary site of photosynthesis in plant cells?',
-        type: 'mcq',
-        options: ['Mitochondria', 'Chloroplast', 'Ribosome', 'Golgi Apparatus'],
-        correctAnswer: 'Chloroplast',
-        explanation: 'Chloroplasts contain chlorophyll pigments that absorb light energy required for photosynthesis.',
-        difficulty: 'easy'
-      },
-      {
-        question: 'What are the two major chemical outputs of the light-dependent reactions of photosynthesis?',
-        type: 'mcq',
-        options: ['ATP and NADPH', 'Glucose and Water', 'Carbon Dioxide and Heat', 'Lactic Acid and NADP+'],
-        correctAnswer: 'ATP and NADPH',
-        explanation: 'Light reactions convert solar energy into chemical energy stored in ATP and NADPH molecules.',
-        difficulty: 'medium'
-      },
-      {
-        question: 'True or False: The Calvin Cycle (dark reactions) can occur in the absence of light as long as ATP and NADPH are available.',
-        type: 'truefalse',
-        options: ['True', 'False'],
-        correctAnswer: 'True',
-        explanation: 'The Calvin Cycle is light-independent because it directly uses stored chemical energy rather than photons.',
-        difficulty: 'medium'
-      },
-      {
-        question: 'Explain why plants appear green to the human eye.',
-        type: 'short',
-        options: [],
-        correctAnswer: 'Chlorophyll pigments absorb blue and red light wavelengths, while reflecting green light wavelengths back to our eyes.',
-        explanation: 'Reflection of green light wavelengths gives plants their green coloration.',
-        difficulty: 'hard'
-      }
-    ],
-    createdAt: new Date()
-  }
-];
+const normalizeQuiz = (q) => q ? ({
+  ...q,
+  _id: q.id,
+  teacherId: q.teacher_id,
+  assignedGrade: q.assigned_grade,
+  createdAt: q.created_at
+}) : q;
 
-const memoryAttempts = IS_PRODUCTION ? [] : [
-  {
-    _id: 'attempt-demo-1',
-    studentId: 'demo-student-1',
-    studentName: 'Rohan Gupta',
-    quizId: 'quiz-demo-1',
-    topic: 'Photosynthesis & Plant Energy',
-    totalScore: 18,
-    maxScore: 20,
-    percentage: 90,
-    answers: [
-      { questionIndex: 0, questionText: 'Which cellular organelle is the primary site of photosynthesis in plant cells?', userAnswer: 'Chloroplast', correctAnswer: 'Chloroplast', isCorrect: true, score: 5, feedback: 'Correct!' },
-      { questionIndex: 1, questionText: 'What are the two major chemical outputs of the light-dependent reactions of photosynthesis?', userAnswer: 'ATP and NADPH', correctAnswer: 'ATP and NADPH', isCorrect: true, score: 5, feedback: 'Correct!' },
-      { questionIndex: 2, questionText: 'True or False: The Calvin Cycle (dark reactions) can occur in the absence of light as long as ATP and NADPH are available.', userAnswer: 'True', correctAnswer: 'True', isCorrect: true, score: 5, feedback: 'Correct!' },
-      { questionIndex: 3, questionText: 'Explain why plants appear green to the human eye.', userAnswer: 'Chlorophyll reflects green light and absorbs other colors.', correctAnswer: 'Chlorophyll reflects green light.', isCorrect: true, score: 3, feedback: 'IBM Granite Feedback: Good explanation, core terminology present.' }
-    ],
-    createdAt: new Date()
-  }
-];
+const normalizeAttempt = (a) => a ? ({
+  ...a,
+  _id: a.id,
+  studentId: a.student_id,
+  studentName: a.student_name,
+  quizId: a.quiz_id,
+  totalScore: a.total_score,
+  maxScore: a.max_score,
+  createdAt: a.created_at
+}) : a;
+
+exports.normalizeQuiz = normalizeQuiz;
+exports.normalizeAttempt = normalizeAttempt;
 
 exports.generateQuiz = async (req, res) => {
+  if (!isSupabaseConfigured()) return noDb(res);
   try {
     const { topic, difficulty = 'medium', questionCount = 4, assignedGrade = 'Class 10' } = req.body;
 
-    if (!topic) {
+    if (!topic || !topic.trim()) {
       return res.status(400).json({ success: false, message: 'Quiz topic is required' });
     }
 
-    // Call IBM BOB engine
+    // Call IBM BOB / AI engine
     const questions = await bobService.generateQuiz(topic, difficulty, questionCount, assignedGrade);
+    const userId = req.user.id;
 
-    const userId = req.user.id || req.user._id;
-    const quizData = {
-      teacherId: userId,
-      topic,
+    const { data, error } = await supabase.from('quizzes').insert({
+      teacher_id: userId,
+      topic: topic.trim(),
       difficulty,
-      questions,
       status: 'published',
-      assignedGrade
-    };
+      assigned_grade: assignedGrade,
+      questions: questions || []
+    }).select().single();
 
-    if (getIsConnected()) {
-      const newQuiz = await Quiz.create(quizData);
-      return res.status(201).json({ success: true, quiz: newQuiz });
-    }
-
-    if (IS_PRODUCTION) return dbUnavailable(res);
-    const memQuiz = { _id: 'quiz-' + Date.now(), ...quizData, createdAt: new Date() };
-    memoryQuizzes.unshift(memQuiz);
-    return res.status(201).json({ success: true, quiz: memQuiz });
+    if (error) return dbErr(res, error);
+    return res.status(201).json({ success: true, quiz: normalizeQuiz(data) });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
 };
 
 exports.updateQuiz = async (req, res) => {
+  if (!isSupabaseConfigured()) return noDb(res);
   try {
     const { id } = req.params;
     const { topic, difficulty, questions, status, assignedGrade } = req.body;
-    const userId = req.user.id || req.user._id;
+    const userId = req.user.id;
 
-    if (getIsConnected()) {
-      const quiz = await Quiz.findById(id);
-      if (!quiz) return res.status(404).json({ success: false, message: 'Quiz not found' });
-      if (String(quiz.teacherId) !== String(userId) && req.user.role !== 'admin') {
-        return res.status(403).json({ success: false, message: 'Access denied: You do not own this quiz' });
-      }
+    // Fetch existing quiz to verify ownership
+    const { data: existing, error: fetchErr } = await supabase.from('quizzes').select('*').eq('id', id).single();
+    if (fetchErr || !existing) return res.status(404).json({ success: false, message: 'Quiz not found' });
 
-      if (topic) quiz.topic = topic;
-      if (difficulty) quiz.difficulty = difficulty;
-      if (questions) quiz.questions = questions;
-      if (status) quiz.status = status;
-      if (assignedGrade) quiz.assignedGrade = assignedGrade;
-
-      const saved = await quiz.save();
-      return res.json({ success: true, quiz: saved });
-    }
-
-    if (IS_PRODUCTION) return dbUnavailable(res);
-    const index = memoryQuizzes.findIndex(q => q._id === id);
-    if (index === -1) return res.status(404).json({ success: false, message: 'Quiz not found' });
-    if (String(memoryQuizzes[index].teacherId) !== String(userId) && req.user.role !== 'admin') {
+    if (existing.teacher_id !== userId && req.user.role !== 'admin') {
       return res.status(403).json({ success: false, message: 'Access denied: You do not own this quiz' });
     }
 
-    if (topic) memoryQuizzes[index].topic = topic;
-    if (difficulty) memoryQuizzes[index].difficulty = difficulty;
-    if (questions) memoryQuizzes[index].questions = questions;
-    if (status) memoryQuizzes[index].status = status;
-    if (assignedGrade) memoryQuizzes[index].assignedGrade = assignedGrade;
+    const updates = {};
+    if (topic !== undefined) updates.topic = topic;
+    if (difficulty !== undefined) updates.difficulty = difficulty;
+    if (questions !== undefined) updates.questions = questions;
+    if (status !== undefined) updates.status = status;
+    if (assignedGrade !== undefined) updates.assigned_grade = assignedGrade;
 
-    return res.json({ success: true, quiz: memoryQuizzes[index] });
+    const { data, error } = await supabase
+      .from('quizzes')
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) return dbErr(res, error);
+    return res.json({ success: true, quiz: normalizeQuiz(data) });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
@@ -162,7 +100,7 @@ exports.regenerateQuestion = async (req, res) => {
     if (!topic) return res.status(400).json({ success: false, message: 'Topic is required' });
 
     const newQuestions = await bobService.generateQuiz(topic, difficulty, 2);
-    const selected = newQuestions.find(q => q.type === type) || newQuestions[0];
+    const selected = (newQuestions && newQuestions.find(q => q.type === type)) || (newQuestions && newQuestions[0]);
 
     return res.json({
       success: true,
@@ -174,29 +112,21 @@ exports.regenerateQuestion = async (req, res) => {
 };
 
 exports.deleteQuiz = async (req, res) => {
+  if (!isSupabaseConfigured()) return noDb(res);
   try {
     const { id } = req.params;
-    const userId = req.user.id || req.user._id;
+    const userId = req.user.id;
 
-    if (getIsConnected()) {
-      const quiz = await Quiz.findById(id);
-      if (!quiz) return res.status(404).json({ success: false, message: 'Quiz not found' });
-      if (String(quiz.teacherId) !== String(userId) && req.user.role !== 'admin') {
-        return res.status(403).json({ success: false, message: 'Access denied: You do not own this quiz' });
-      }
+    const { data: existing, error: fetchErr } = await supabase.from('quizzes').select('*').eq('id', id).single();
+    if (fetchErr || !existing) return res.status(404).json({ success: false, message: 'Quiz not found' });
 
-      await Quiz.deleteOne({ _id: id });
-      return res.json({ success: true, message: 'Quiz deleted successfully' });
-    }
-
-    if (IS_PRODUCTION) return dbUnavailable(res);
-    const index = memoryQuizzes.findIndex(q => q._id === id);
-    if (index === -1) return res.status(404).json({ success: false, message: 'Quiz not found' });
-    if (String(memoryQuizzes[index].teacherId) !== String(userId) && req.user.role !== 'admin') {
+    if (existing.teacher_id !== userId && req.user.role !== 'admin') {
       return res.status(403).json({ success: false, message: 'Access denied: You do not own this quiz' });
     }
 
-    memoryQuizzes.splice(index, 1);
+    const { error } = await supabase.from('quizzes').delete().eq('id', id);
+    if (error) return dbErr(res, error);
+
     return res.json({ success: true, message: 'Quiz deleted successfully' });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -204,73 +134,63 @@ exports.deleteQuiz = async (req, res) => {
 };
 
 exports.getQuizzes = async (req, res) => {
+  if (!isSupabaseConfigured()) return noDb(res);
   try {
-    const userId = req.user.id || req.user._id;
-    const filter = req.user.role === 'teacher' ? { teacherId: userId } : { status: 'published' };
+    const userId = req.user.id;
+    let query = supabase.from('quizzes').select('*').order('created_at', { ascending: false });
 
-    if (getIsConnected()) {
-      const quizzes = await Quiz.find(filter).sort({ createdAt: -1 });
-      return res.json({ success: true, quizzes });
+    if (req.user.role === 'teacher') {
+      query = query.eq('teacher_id', userId);
+    } else {
+      query = query.eq('status', 'published');
     }
 
-    if (IS_PRODUCTION) return dbUnavailable(res);
-    const quizzes = req.user.role === 'teacher'
-      ? memoryQuizzes.filter(q => String(q.teacherId) === String(userId))
-      : memoryQuizzes.filter(q => q.status === 'published');
-    return res.json({ success: true, quizzes });
+    const { data, error } = await query;
+    if (error) return dbErr(res, error);
+    return res.json({ success: true, quizzes: (data || []).map(normalizeQuiz) });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
 };
 
 exports.getQuizById = async (req, res) => {
+  if (!isSupabaseConfigured()) return noDb(res);
   try {
     const { id } = req.params;
-    let quiz = null;
-    if (getIsConnected()) {
-      quiz = await Quiz.findById(id);
-    } else {
-      if (IS_PRODUCTION) return dbUnavailable(res);
-      quiz = memoryQuizzes.find(q => q._id === id);
-    }
-
-    if (!quiz) {
+    const { data, error } = await supabase.from('quizzes').select('*').eq('id', id).single();
+    if (error || !data) {
       return res.status(404).json({ success: false, message: 'Quiz not found' });
     }
 
-    const userId = req.user.id || req.user._id;
-    if (req.user.role === 'teacher' && String(quiz.teacherId) !== String(userId) && req.user.role !== 'admin') {
+    const userId = req.user.id;
+    if (req.user.role === 'teacher' && data.teacher_id !== userId && req.user.role !== 'admin') {
       return res.status(403).json({ success: false, message: 'Access denied: You do not own this quiz' });
     }
 
-    return res.json({ success: true, quiz });
+    return res.json({ success: true, quiz: normalizeQuiz(data) });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
 };
 
 exports.gradeAttempt = async (req, res) => {
+  if (!isSupabaseConfigured()) return noDb(res);
   try {
     const { quizId, answers } = req.body;
-    let quiz = null;
+    if (!quizId) return res.status(400).json({ success: false, message: 'Quiz ID is required' });
 
-    if (getIsConnected()) {
-      quiz = await Quiz.findById(quizId);
-    } else {
-      if (IS_PRODUCTION) return dbUnavailable(res);
-      quiz = memoryQuizzes.find(q => q._id === quizId);
-    }
-
-    if (!quiz) {
+    const { data: quiz, error: quizErr } = await supabase.from('quizzes').select('*').eq('id', quizId).single();
+    if (quizErr || !quiz) {
       return res.status(404).json({ success: false, message: 'Quiz not found for grading' });
     }
 
+    const questions = quiz.questions || [];
     let totalScore = 0;
-    const maxScore = quiz.questions.length * 5;
+    const maxScore = Math.max(questions.length * 5, 5);
     const gradedAnswers = [];
 
-    for (let i = 0; i < quiz.questions.length; i++) {
-      const q = quiz.questions[i];
+    for (let i = 0; i < questions.length; i++) {
+      const q = questions[i];
       const studentAns = answers && answers[i] !== undefined ? answers[i] : '';
 
       if (q.type === 'mcq' || q.type === 'truefalse') {
@@ -298,71 +218,69 @@ exports.gradeAttempt = async (req, res) => {
           correctAnswer: q.correctAnswer,
           isCorrect: score >= 3,
           score,
-          feedback: `[IBM Granite NLP Feedback]: ${bobGrading.feedback}`
+          feedback: `[IBM Granite NLP Feedback]: ${bobGrading.feedback || 'Evaluated'}`
         });
       }
     }
 
     const percentage = Math.round((totalScore / maxScore) * 100);
-    const userId = req.user.id || req.user._id;
+    const userId = req.user.id;
 
-    const attemptData = {
-      studentId: userId,
-      studentName: req.user.name || 'Student',
-      quizId: quiz._id,
+    const { data: savedAttempt, error: attemptErr } = await supabase.from('attempts').insert({
+      student_id: userId,
+      student_name: req.user.name || 'Student',
+      quiz_id: quiz.id,
       topic: quiz.topic,
       answers: gradedAnswers,
-      totalScore,
-      maxScore,
+      total_score: totalScore,
+      max_score: maxScore,
       percentage
-    };
+    }).select().single();
 
-    if (getIsConnected()) {
-      const savedAttempt = await Attempt.create(attemptData);
-      return res.status(201).json({ success: true, attempt: savedAttempt });
-    }
-
-    if (IS_PRODUCTION) return dbUnavailable(res);
-    const memAttempt = { _id: 'attempt-' + Date.now(), ...attemptData, createdAt: new Date() };
-    memoryAttempts.unshift(memAttempt);
-    return res.status(201).json({ success: true, attempt: memAttempt });
+    if (attemptErr) return dbErr(res, attemptErr);
+    return res.status(201).json({ success: true, attempt: normalizeAttempt(savedAttempt) });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
 };
 
 exports.getAttempts = async (req, res) => {
+  if (!isSupabaseConfigured()) return noDb(res);
   try {
-    const userId = req.user.id || req.user._id;
+    const userId = req.user.id;
 
     if (req.user.role === 'student') {
-      if (getIsConnected()) {
-        const attempts = await Attempt.find({ studentId: userId }).sort({ createdAt: -1 });
-        return res.json({ success: true, attempts });
-      }
-      if (IS_PRODUCTION) return dbUnavailable(res);
-      const attempts = memoryAttempts.filter(a => String(a.studentId) === String(userId));
-      return res.json({ success: true, attempts });
+      const { data, error } = await supabase
+        .from('attempts')
+        .select('*')
+        .eq('student_id', userId)
+        .order('created_at', { ascending: false });
+      if (error) return dbErr(res, error);
+      return res.json({ success: true, attempts: (data || []).map(normalizeAttempt) });
     }
 
     // Teacher: only see attempts for quizzes they created
-    if (getIsConnected()) {
-      const teacherQuizIds = await Quiz.find({ teacherId: userId }, '_id').lean();
-      const quizIdStrings = teacherQuizIds.map(q => String(q._id));
-      const attempts = await Attempt.find({ quizId: { $in: quizIdStrings } }).sort({ createdAt: -1 });
-      return res.json({ success: true, attempts });
+    const { data: teacherQuizzes, error: qErr } = await supabase
+      .from('quizzes')
+      .select('id')
+      .eq('teacher_id', userId);
+
+    if (qErr) return dbErr(res, qErr);
+
+    const quizIds = (teacherQuizzes || []).map(q => q.id);
+    if (quizIds.length === 0) {
+      return res.json({ success: true, attempts: [] });
     }
 
-    if (IS_PRODUCTION) return dbUnavailable(res);
-    const teacherQuizIds = memoryQuizzes
-      .filter(q => String(q.teacherId) === String(userId))
-      .map(q => String(q._id));
-    const attempts = memoryAttempts.filter(a => teacherQuizIds.includes(String(a.quizId)));
-    return res.json({ success: true, attempts });
+    const { data, error } = await supabase
+      .from('attempts')
+      .select('*')
+      .in('quiz_id', quizIds)
+      .order('created_at', { ascending: false });
+
+    if (error) return dbErr(res, error);
+    return res.json({ success: true, attempts: (data || []).map(normalizeAttempt) });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
 };
-
-exports.memoryQuizzes = memoryQuizzes;
-exports.memoryAttempts = memoryAttempts;

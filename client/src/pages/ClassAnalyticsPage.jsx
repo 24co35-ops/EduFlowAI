@@ -177,18 +177,24 @@ export default function ClassAnalyticsPage() {
           <div className="glass-card p-6 rounded-3xl border border-slate-800 space-y-4">
             <h3 className="text-base font-bold text-white font-outfit">Recent Student Submissions</h3>
             <div className="space-y-3">
-              {attempts.slice(0, 3).map((att, idx) => (
-                <div key={att._id || idx} className="p-3.5 rounded-2xl bg-slate-900/80 border border-slate-800 flex items-center justify-between text-xs">
-                  <div>
-                    <h4 className="font-bold text-white">{att.studentName}</h4>
-                    <p className="text-[11px] text-slate-400">{att.topic}</p>
-                  </div>
-                  <div className="text-right">
-                    <span className="font-extrabold text-emerald-400 text-sm">{att.percentage}%</span>
-                    <p className="text-[10px] text-slate-500">{att.totalScore}/{att.maxScore} Pts</p>
-                  </div>
+              {attempts.length === 0 ? (
+                <div className="p-4 rounded-2xl bg-slate-900/40 border border-dashed border-slate-800 text-center">
+                  <p className="text-xs text-slate-500">No student submissions yet.</p>
                 </div>
-              ))}
+              ) : (
+                attempts.slice(0, 3).map((att, idx) => (
+                  <div key={att._id || idx} className="p-3.5 rounded-2xl bg-slate-900/80 border border-slate-800 flex items-center justify-between text-xs">
+                    <div>
+                      <h4 className="font-bold text-white">{att.studentName}</h4>
+                      <p className="text-[11px] text-slate-400">{att.topic}</p>
+                    </div>
+                    <div className="text-right">
+                      <span className="font-extrabold text-emerald-400 text-sm">{att.percentage}%</span>
+                      <p className="text-[10px] text-slate-500">{att.totalScore}/{att.maxScore} Pts</p>
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
           </div>
 

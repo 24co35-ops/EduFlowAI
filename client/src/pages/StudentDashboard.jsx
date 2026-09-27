@@ -9,7 +9,8 @@ import {
   LineChart, 
   ArrowRight, 
   CheckCircle2, 
-  Clock 
+  Clock,
+  AlertTriangle
 } from 'lucide-react';
 import { getStudentProgress, getQuizzes } from '../services/api';
 import RemediationModal from '../components/RemediationModal';
@@ -138,23 +139,32 @@ export default function StudentDashboard({ user }) {
           </div>
 
           <div className="space-y-3">
-            {quizzes.slice(0, 3).map((q, idx) => (
-              <div key={q._id || idx} className="p-4 rounded-2xl bg-slate-900/80 border border-slate-800 flex items-center justify-between hover:border-emerald-500/30 transition-all">
-                <div className="space-y-1">
-                  <h4 className="text-xs font-bold text-white">{q.topic}</h4>
-                  <div className="flex items-center gap-2 text-[10px] text-slate-400">
-                    <span className="capitalize text-emerald-400 font-semibold">{q.difficulty}</span>
-                    <span>• {q.questions?.length || 4} Questions</span>
-                  </div>
-                </div>
-                <Link
-                  to={`/quizzes?id=${q._id}`}
-                  className="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition-all shadow-md shadow-emerald-600/20"
-                >
-                  Attempt Now
+            {quizzes.length === 0 ? (
+              <div className="p-6 rounded-2xl bg-slate-900/40 border border-dashed border-slate-800 text-center space-y-2">
+                <p className="text-xs text-slate-400">No quizzes assigned yet.</p>
+                <Link to="/flashcards" className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-400 hover:text-emerald-300">
+                  <Layers className="w-3.5 h-3.5" /> Practice with flashcards instead
                 </Link>
               </div>
-            ))}
+            ) : (
+              quizzes.slice(0, 3).map((q, idx) => (
+                <div key={q._id || idx} className="p-4 rounded-2xl bg-slate-900/80 border border-slate-800 flex items-center justify-between hover:border-emerald-500/30 transition-all">
+                  <div className="space-y-1">
+                    <h4 className="text-xs font-bold text-white">{q.topic}</h4>
+                    <div className="flex items-center gap-2 text-[10px] text-slate-400">
+                      <span className="capitalize text-emerald-400 font-semibold">{q.difficulty}</span>
+                      <span>• {q.questions?.length || 4} Questions</span>
+                    </div>
+                  </div>
+                  <Link
+                    to={`/quizzes?id=${q._id}`}
+                    className="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition-all shadow-md shadow-emerald-600/20"
+                  >
+                    Attempt Now
+                  </Link>
+                </div>
+              ))
+            )}
           </div>
         </div>
 

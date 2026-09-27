@@ -11,7 +11,9 @@ import {
   Plus, 
   FileText, 
   Globe,
-  Zap
+  Zap,
+  Database,
+  AlertTriangle
 } from 'lucide-react';
 import { getLessons, getQuizzes, getTeacherAnalytics } from '../services/api';
 
@@ -150,21 +152,30 @@ export default function TeacherDashboard({ user }) {
           </div>
 
           <div className="space-y-3">
-            {lessons.slice(0, 3).map((item, idx) => (
-              <div key={item._id || idx} className="p-4 rounded-2xl bg-slate-900/80 border border-slate-800 hover:border-indigo-500/30 transition-all flex items-center justify-between">
-                <div className="space-y-1">
-                  <h4 className="text-xs font-bold text-white">{item.subject}</h4>
-                  <p className="text-[11px] text-slate-400 line-clamp-1">{item.overview}</p>
-                  <div className="flex items-center gap-3 text-[10px] text-slate-500">
-                    <span>📅 5-Day Plan</span>
-                    <span>🌐 {item.language === 'en' ? 'English' : 'Multilingual'}</span>
-                  </div>
-                </div>
-                <Link to="/lesson-planner" className="px-3 py-1.5 rounded-lg bg-indigo-600/20 text-indigo-300 border border-indigo-500/30 text-xs font-semibold hover:bg-indigo-600 hover:text-white transition-all">
-                  Open
+            {lessons.length === 0 ? (
+              <div className="p-6 rounded-2xl bg-slate-900/40 border border-dashed border-slate-800 text-center space-y-2">
+                <p className="text-xs text-slate-400">No lesson plans created yet.</p>
+                <Link to="/lesson-planner" className="inline-flex items-center gap-1.5 text-xs font-semibold text-indigo-400 hover:text-indigo-300">
+                  <Plus className="w-3.5 h-3.5" /> Create your first plan
                 </Link>
               </div>
-            ))}
+            ) : (
+              lessons.slice(0, 3).map((item, idx) => (
+                <div key={item._id || idx} className="p-4 rounded-2xl bg-slate-900/80 border border-slate-800 hover:border-indigo-500/30 transition-all flex items-center justify-between">
+                  <div className="space-y-1">
+                    <h4 className="text-xs font-bold text-white">{item.subject}</h4>
+                    <p className="text-[11px] text-slate-400 line-clamp-1">{item.overview}</p>
+                    <div className="flex items-center gap-3 text-[10px] text-slate-500">
+                      <span>📅 5-Day Plan</span>
+                      <span>🌐 {item.language === 'en' ? 'English' : 'Multilingual'}</span>
+                    </div>
+                  </div>
+                  <Link to="/lesson-planner" className="px-3 py-1.5 rounded-lg bg-indigo-600/20 text-indigo-300 border border-indigo-500/30 text-xs font-semibold hover:bg-indigo-600 hover:text-white transition-all">
+                    Open
+                  </Link>
+                </div>
+              ))
+            )}
           </div>
         </div>
 
@@ -181,22 +192,31 @@ export default function TeacherDashboard({ user }) {
           </div>
 
           <div className="space-y-3">
-            {quizzes.slice(0, 3).map((q, idx) => (
-              <div key={q._id || idx} className="p-4 rounded-2xl bg-slate-900/80 border border-slate-800 hover:border-purple-500/30 transition-all flex items-center justify-between">
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <h4 className="text-xs font-bold text-white">{q.topic}</h4>
-                    <span className="px-2 py-0.5 rounded text-[9px] font-bold bg-amber-500/10 text-amber-400 border border-amber-500/20 capitalize">
-                      {q.difficulty}
-                    </span>
-                  </div>
-                  <p className="text-[11px] text-slate-400">{q.questions?.length || 4} Questions • Auto-graded</p>
-                </div>
-                <Link to="/analytics" className="px-3 py-1.5 rounded-lg bg-purple-600/20 text-purple-300 border border-purple-500/30 text-xs font-semibold hover:bg-purple-600 hover:text-white transition-all">
-                  Stats
+            {quizzes.length === 0 ? (
+              <div className="p-6 rounded-2xl bg-slate-900/40 border border-dashed border-slate-800 text-center space-y-2">
+                <p className="text-xs text-slate-400">No quizzes built yet.</p>
+                <Link to="/quiz-builder" className="inline-flex items-center gap-1.5 text-xs font-semibold text-purple-400 hover:text-purple-300">
+                  <Zap className="w-3.5 h-3.5" /> Build an auto quiz
                 </Link>
               </div>
-            ))}
+            ) : (
+              quizzes.slice(0, 3).map((q, idx) => (
+                <div key={q._id || idx} className="p-4 rounded-2xl bg-slate-900/80 border border-slate-800 hover:border-purple-500/30 transition-all flex items-center justify-between">
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <h4 className="text-xs font-bold text-white">{q.topic}</h4>
+                      <span className="px-2 py-0.5 rounded text-[9px] font-bold bg-amber-500/10 text-amber-400 border border-amber-500/20 capitalize">
+                        {q.difficulty}
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-slate-400">{q.questions?.length || 4} Questions • Auto-graded</p>
+                  </div>
+                  <Link to="/analytics" className="px-3 py-1.5 rounded-lg bg-purple-600/20 text-purple-300 border border-purple-500/30 text-xs font-semibold hover:bg-purple-600 hover:text-white transition-all">
+                    Stats
+                  </Link>
+                </div>
+              ))
+            )}
           </div>
         </div>
 

@@ -146,20 +146,29 @@ export default function StudentProgressPage() {
           </h3>
 
           <div className="space-y-3">
-            {progress?.recentAttempts?.map((att, idx) => (
-              <div key={idx} className="p-4 rounded-2xl bg-slate-900/80 border border-slate-800 flex items-center justify-between">
-                <div>
-                  <h4 className="text-xs font-bold text-white">{att.topic}</h4>
-                  <p className="text-[11px] text-slate-400">
-                    Date: {att.createdAt ? new Date(att.createdAt).toLocaleDateString() : 'Recent'}
-                  </p>
-                </div>
-                <div className="text-right">
-                  <span className="font-extrabold text-emerald-400 text-base">{att.percentage}%</span>
-                  <span className="block text-[10px] text-slate-500 font-medium">Passed</span>
-                </div>
+            {(!progress?.recentAttempts || progress.recentAttempts.length === 0) ? (
+              <div className="p-6 rounded-2xl bg-slate-900/40 border border-dashed border-slate-800 text-center space-y-2">
+                <p className="text-xs text-slate-400">No quiz attempts recorded yet.</p>
+                <Link to="/quizzes" className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-400 hover:text-emerald-300">
+                  <Zap className="w-3.5 h-3.5" /> Take your first practice quiz
+                </Link>
               </div>
-            ))}
+            ) : (
+              progress.recentAttempts.map((att, idx) => (
+                <div key={idx} className="p-4 rounded-2xl bg-slate-900/80 border border-slate-800 flex items-center justify-between">
+                  <div>
+                    <h4 className="text-xs font-bold text-white">{att.topic}</h4>
+                    <p className="text-[11px] text-slate-400">
+                      Date: {att.createdAt ? new Date(att.createdAt).toLocaleDateString() : 'Recent'}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <span className="font-extrabold text-emerald-400 text-base">{att.percentage}%</span>
+                    <span className="block text-[10px] text-slate-500 font-medium">Passed</span>
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         </div>
 

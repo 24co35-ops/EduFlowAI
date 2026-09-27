@@ -1,35 +1,29 @@
-const Flashcard = require('../models/Flashcard');
-const Attempt = require('../models/Attempt');
-const Quiz = require('../models/Quiz');
+const { supabase, isSupabaseConfigured } = require('../config/supabase');
 const bobService = require('../services/bob.service');
-const { getIsConnected } = require('../config/db');
-const { memoryAttempts, memoryQuizzes } = require('./quizController');
 
-const IS_PRODUCTION = process.env.NODE_ENV === 'production';
+const dbErr = (res, err) =>
+  res.status(500).json({ success: false, message: err.message || 'Database error.' });
 
-// Helper: return 503 when DB is unavailable in production.
-const dbUnavailable = (res) =>
-  res.status(503).json({
-    success: false,
-    message: 'Service temporarily unavailable. Database connection required in production.'
-  });
+const noDb = (res) =>
+  res.status(503).json({ success: false, message: 'Supabase not configured. Set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in Vercel env vars.' });
 
-// Memory store fallback (development / demo mode only)
-const memoryFlashcards = IS_PRODUCTION ? [] : [
-  {
-    _id: 'flashcard-demo-1',
-    studentId: 'demo-student-1',
-    title: 'Photosynthesis Core Concepts',
-    summary: '• Light reactions produce ATP & NADPH in thylakoid membranes.\n• Calvin Cycle utilizes carbon dioxide to synthesize glucose.\n• Chlorophyll reflects green wavelengths while absorbing red and blue light.',
-    cards: [
-      { front: 'Light Reaction Site', back: 'Thylakoid membrane inside chloroplasts.' },
-      { front: 'Dark Reaction / Calvin Cycle Site', back: 'Stroma of chloroplasts.' },
-      { front: 'Primary Pigment', back: 'Chlorophyll a and Chlorophyll b.' },
-      { front: 'Key Output Molecule', back: 'Glucose (C₆H₁₂O₆).' }
-    ],
-    createdAt: new Date()
-  }
-];
+const normalizeFlashcard = (f) => f ? ({
+  ...f,
+  _id: f.id,
+  studentId: f.student_id,
+  createdAt: f.created_at
+}) : f;
+
+const normalizeAttempt = (a) => a ? ({
+  ...a,
+  _id: a.id,
+  studentId: a.student_id,
+  studentName: a.student_name,
+  quizId: a.quiz_id,
+  totalScore: a.total_score,
+  maxScore: a.max_score,
+  createdAt: a.created_at
+}) : a;
 
 /**
  * Calculates transparent multi-factor topic mastery score
@@ -46,7 +40,7 @@ function calculateTopicMastery(attemptsForTopic) {
   }
 
   // Sort by date ascending
-  const sorted = [...attemptsForTopic].sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+  const sorted = [...attemptsForTopic].sort((a, b) => new Date(a.created_at || a.createdAt) - new Date(b.created_at || b.createdAt));
   const recentAttempt = sorted[sorted.length - 1];
   const recentScore = recentAttempt.percentage || 0;
 
@@ -95,6 +89,7 @@ function calculateTopicMastery(attemptsForTopic) {
 }
 
 exports.generateFlashcards = async (req, res) => {
+  if (!isSupabaseConfigured()) return noDb(res);
   try {
     const { text, title = 'Study Deck' } = req.body;
     if (!text || text.trim().length === 0) {
@@ -102,60 +97,52 @@ exports.generateFlashcards = async (req, res) => {
     }
 
     const bobDeck = await bobService.generateFlashcards(text, title);
-    const userId = req.user.id || req.user._id;
-    const flashcardData = {
-      studentId: userId,
+    const userId = req.user.id;
+
+    const { data, error } = await supabase.from('flashcards').insert({
+      student_id: userId,
       title: bobDeck.title || title,
       summary: bobDeck.summary || '',
       cards: bobDeck.cards || []
-    };
+    }).select().single();
 
-    if (getIsConnected()) {
-      try {
-        const savedDeck = await Flashcard.create(flashcardData);
-        return res.status(201).json({ success: true, deck: savedDeck, _aiMetadata: bobDeck._aiMetadata });
-      } catch (dbErr) {
-        if (IS_PRODUCTION) return dbUnavailable(res);
-      }
-    }
-
-    if (IS_PRODUCTION) return dbUnavailable(res);
-    const memDeck = { _id: 'deck-' + Date.now(), ...flashcardData, createdAt: new Date() };
-    memoryFlashcards.unshift(memDeck);
-    return res.status(201).json({ success: true, deck: memDeck, _aiMetadata: bobDeck._aiMetadata });
+    if (error) return dbErr(res, error);
+    return res.status(201).json({ success: true, deck: normalizeFlashcard(data), _aiMetadata: bobDeck._aiMetadata });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
 };
 
 exports.getFlashcards = async (req, res) => {
+  if (!isSupabaseConfigured()) return noDb(res);
   try {
-    const userId = req.user.id || req.user._id;
-    if (getIsConnected()) {
-      const decks = await Flashcard.find({ studentId: userId }).sort({ createdAt: -1 });
-      return res.json({ success: true, decks });
-    }
+    const userId = req.user.id;
+    const { data, error } = await supabase
+      .from('flashcards')
+      .select('*')
+      .eq('student_id', userId)
+      .order('created_at', { ascending: false });
 
-    if (IS_PRODUCTION) return dbUnavailable(res);
-    const decks = memoryFlashcards.filter(d => String(d.studentId) === String(userId));
-    return res.json({ success: true, decks });
+    if (error) return dbErr(res, error);
+    return res.json({ success: true, decks: (data || []).map(normalizeFlashcard) });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
 };
 
 exports.getStudentProgress = async (req, res) => {
+  if (!isSupabaseConfigured()) return noDb(res);
   try {
-    const studentId = req.user.id || req.user._id;
-    let attempts = [];
+    const studentId = req.user.id;
+    const { data, error } = await supabase
+      .from('attempts')
+      .select('*')
+      .eq('student_id', studentId)
+      .order('created_at', { ascending: false });
 
-    if (getIsConnected()) {
-      attempts = await Attempt.find({ studentId }).sort({ createdAt: -1 });
-    } else {
-      if (IS_PRODUCTION) return dbUnavailable(res);
-      attempts = memoryAttempts.filter(a => String(a.studentId) === String(studentId));
-    }
+    if (error) return dbErr(res, error);
 
+    const attempts = (data || []).map(normalizeAttempt);
     const totalQuizzesTaken = attempts.length;
     const averageScore = totalQuizzesTaken > 0
       ? Math.round(attempts.reduce((acc, curr) => acc + (curr.percentage || 0), 0) / totalQuizzesTaken)
@@ -200,27 +187,33 @@ exports.getStudentProgress = async (req, res) => {
 };
 
 exports.getTeacherAnalytics = async (req, res) => {
+  if (!isSupabaseConfigured()) return noDb(res);
   try {
-    const teacherId = req.user.id || req.user._id;
+    const teacherId = req.user.id;
+
+    // Only fetch attempts for quizzes this teacher created
+    const { data: teacherQuizzes, error: qErr } = await supabase
+      .from('quizzes')
+      .select('id')
+      .eq('teacher_id', teacherId);
+
+    if (qErr) return dbErr(res, qErr);
+
+    const quizIds = (teacherQuizzes || []).map(q => q.id);
     let attempts = [];
 
-    if (getIsConnected()) {
-      // Only fetch attempts for quizzes this teacher created
-      const teacherQuizIds = await Quiz.find({ teacherId }, '_id').lean();
-      const quizIdStrings = teacherQuizIds.map(q => String(q._id));
-      attempts = quizIdStrings.length > 0
-        ? await Attempt.find({ quizId: { $in: quizIdStrings } }).sort({ createdAt: -1 })
-        : [];
-    } else {
-      if (IS_PRODUCTION) return dbUnavailable(res);
-      // Memory fallback: filter attempts to teacher's own quizzes
-      const teacherQuizIds = memoryQuizzes
-        .filter(q => String(q.teacherId) === String(teacherId))
-        .map(q => String(q._id));
-      attempts = memoryAttempts.filter(a => teacherQuizIds.includes(String(a.quizId)));
+    if (quizIds.length > 0) {
+      const { data: attemptsData, error: aErr } = await supabase
+        .from('attempts')
+        .select('*')
+        .in('quiz_id', quizIds)
+        .order('created_at', { ascending: false });
+
+      if (aErr) return dbErr(res, aErr);
+      attempts = (attemptsData || []).map(normalizeAttempt);
     }
 
-    const totalStudents = new Set(attempts.map(a => a.studentId)).size;
+    const totalStudents = new Set(attempts.map(a => a.studentId || a.student_id)).size;
     const quizzesCompleted = attempts.length;
     const classAverageScore = quizzesCompleted > 0
       ? Math.round(attempts.reduce((acc, curr) => acc + (curr.percentage || 0), 0) / quizzesCompleted)
@@ -262,11 +255,12 @@ exports.getTeacherAnalytics = async (req, res) => {
     // Identify students needing support
     const studentRiskMap = {};
     attempts.forEach(a => {
-      if (!studentRiskMap[a.studentId]) {
-        studentRiskMap[a.studentId] = { studentName: a.studentName || 'Student', attempts: [], totalScore: 0 };
+      const sId = a.studentId || a.student_id;
+      if (!studentRiskMap[sId]) {
+        studentRiskMap[sId] = { studentName: a.studentName || a.student_name || 'Student', attempts: [], totalScore: 0 };
       }
-      studentRiskMap[a.studentId].attempts.push(a);
-      studentRiskMap[a.studentId].totalScore += a.percentage || 0;
+      studentRiskMap[sId].attempts.push(a);
+      studentRiskMap[sId].totalScore += a.percentage || 0;
     });
 
     const studentsAtRisk = Object.keys(studentRiskMap).map(sId => {

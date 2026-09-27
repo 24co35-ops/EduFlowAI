@@ -1,15 +1,11 @@
+require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
-const mongoSanitize = require('express-mongo-sanitize');
 const rateLimit = require('express-rate-limit');
-const dotenv = require('dotenv');
 const { isSupabaseConfigured } = require('./config/supabase');
 const bobService = require('./services/bob.service');
 const aiService = require('./services/ai');
-
-// Load environment variables
-dotenv.config();
 
 const app = express();
 
@@ -35,9 +31,6 @@ app.use(
 
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
-
-// Strip $ and . from request bodies to prevent NoSQL injection
-app.use(mongoSanitize());
 
 // ponytail: Supabase client is initialized on require; no explicit connect step needed
 
@@ -67,6 +60,7 @@ app.get(['/api/health', '/health'], (req, res) => {
   const payload = {
     status: 'online',
     appName: 'EduFlow AI Enterprise Backend',
+    supabaseConfigured: isSupabaseConfigured(),
     databaseConnected: isSupabaseConfigured(),
     databaseProvider: 'Supabase Postgres',
     timestamp: new Date().toISOString(),

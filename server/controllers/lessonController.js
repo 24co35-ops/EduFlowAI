@@ -1,69 +1,25 @@
-const Lesson = require('../models/Lesson');
+const { supabase, isSupabaseConfigured } = require('../config/supabase');
 const bobService = require('../services/bob.service');
 const { extractTextFromBuffer } = require('../utils/pdfParser');
-const { getIsConnected } = require('../config/db');
 
-const IS_PRODUCTION = process.env.NODE_ENV === 'production';
+// ponytail: single helper — all Supabase errors surface as 500 with real message
+const dbErr = (res, err) =>
+  res.status(500).json({ success: false, message: err.message || 'Database error.' });
 
-// Helper: return 503 when DB is unavailable in production.
-const dbUnavailable = (res) =>
-  res.status(503).json({
-    success: false,
-    message: 'Service temporarily unavailable. Database connection required in production.'
-  });
+const noDb = (res) =>
+  res.status(503).json({ success: false, message: 'Supabase not configured. Set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in Vercel env vars.' });
 
-// In-memory store for fallback demo mode (development only)
-const memoryLessons = IS_PRODUCTION ? [] : [
-  {
-    _id: 'lesson-demo-1',
-    teacherId: 'demo-teacher-1',
-    subject: 'Class 10 Physics — Motion & Electricity',
-    syllabusFileName: 'physics_class10_syllabus.pdf',
-    syllabusText: 'Chapter 1: Electric Current, Potential Difference, Ohm Law, Resistance in series and parallel. Chapter 2: Magnetic Effects of Current.',
-    overview: 'Comprehensive 5-day structured plan powered by IBM BOB Granite 13B.',
-    plan: [
-      {
-        day: 1,
-        topic: 'Electric Current & Potential Difference',
-        duration: '45 mins',
-        activities: ['Interactive lecture on electron flow', 'Real-life circuit demonstration'],
-        objectives: ['Define electric current & unit (Ampere)', 'Calculate potential difference V = W/Q']
-      },
-      {
-        day: 2,
-        topic: 'Ohm Law & Resistance Factors',
-        duration: '50 mins',
-        activities: ['Laboratory V-I graph plotting exercise', 'Group problem solving'],
-        objectives: ['State Ohm Law', 'Analyze resistivity variables (length, area)']
-      },
-      {
-        day: 3,
-        topic: 'Resistors in Series and Parallel',
-        duration: '45 mins',
-        activities: ['Equivalent resistance calculation workshop', 'Breadboard circuit building'],
-        objectives: ['Derive R_total = R1 + R2', 'Analyze parallel voltage distribution']
-      },
-      {
-        day: 4,
-        topic: 'Heating Effects of Electric Current',
-        duration: '45 mins',
-        activities: ['Joule Law of heating video case study', 'Safety fuse discussion'],
-        objectives: ['Understand H = I²Rt formula', 'Evaluate household electrical safety']
-      },
-      {
-        day: 5,
-        topic: 'Weekly Assessment & Magnetic Effects Intro',
-        duration: '60 mins',
-        activities: ['Formative MCQ Quiz', 'Right Hand Thumb Rule demonstration'],
-        objectives: ['Evaluate weekly mastery', 'Introduce magnetic field lines']
-      }
-    ],
-    language: 'en',
-    createdAt: new Date()
-  }
-];
+const normalizeLesson = (l) => l ? ({
+  ...l,
+  _id: l.id,
+  teacherId: l.teacher_id,
+  syllabusFileName: l.syllabus_file_name,
+  syllabusText: l.syllabus_text,
+  createdAt: l.created_at
+}) : l;
 
 exports.generateLessonPlan = async (req, res) => {
+  if (!isSupabaseConfigured()) return noDb(res);
   try {
     let syllabusText = req.body.syllabusText || '';
     const subject = req.body.subject || 'General Science';
@@ -73,195 +29,106 @@ exports.generateLessonPlan = async (req, res) => {
     if (req.file) {
       filename = req.file.originalname;
       const extracted = await extractTextFromBuffer(req.file.buffer, filename);
-      if (extracted && extracted.trim().length > 0) {
-        syllabusText = extracted;
-      }
+      if (extracted?.trim().length > 0) syllabusText = extracted;
     }
-
-    if (!syllabusText || syllabusText.trim().length === 0) {
+    if (!syllabusText.trim()) {
       syllabusText = 'Standard Science Curriculum Syllabus: Fundamentals, Theories, Experiments, and Final Evaluation.';
     }
 
-    // Call IBM BOB AI engine
     const bobResult = await bobService.generateLessonPlan(syllabusText, subject, language);
+    const userId = req.user.id;
 
-    const userId = req.user.id || req.user._id;
-    const lessonData = {
-      teacherId: userId,
-      subject: bobResult.subject || subject,
-      syllabusFileName: filename,
-      syllabusText: syllabusText.slice(0, 1000),
-      overview: bobResult.overview || 'Structured IBM BOB Generated Plan',
-      plan: bobResult.plan || [],
-      language: language
-    };
+    const { data, error } = await supabase.from('lessons').insert({
+      teacher_id:        userId,
+      subject:           bobResult.subject || subject,
+      syllabus_file_name: filename,
+      syllabus_text:     syllabusText.slice(0, 1000),
+      overview:          bobResult.overview || 'IBM BOB Generated Plan',
+      plan:              bobResult.plan || [],
+      language
+    }).select().single();
 
-    if (getIsConnected()) {
-      const savedLesson = await Lesson.create(lessonData);
-      return res.status(201).json({ success: true, lesson: savedLesson, _aiMetadata: bobResult._aiMetadata });
-    }
-
-    // Fallback store — development / demo mode only.
-    if (IS_PRODUCTION) return dbUnavailable(res);
-    const memLesson = { _id: 'lesson-' + Date.now(), ...lessonData, createdAt: new Date() };
-    memoryLessons.unshift(memLesson);
-    return res.status(201).json({ success: true, lesson: memLesson, _aiMetadata: bobResult._aiMetadata });
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
-  }
-};
-
-exports.updateLessonPlan = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { subject, overview, plan, language } = req.body;
-    const userId = req.user.id || req.user._id;
-
-    if (getIsConnected()) {
-      const lesson = await Lesson.findById(id);
-      if (!lesson) return res.status(404).json({ success: false, message: 'Lesson plan not found' });
-      if (String(lesson.teacherId) !== String(userId) && req.user.role !== 'admin') {
-        return res.status(403).json({ success: false, message: 'Access denied: You do not own this lesson plan' });
-      }
-
-      if (subject) lesson.subject = subject;
-      if (overview) lesson.overview = overview;
-      if (plan) lesson.plan = plan;
-      if (language) lesson.language = language;
-
-      const saved = await lesson.save();
-      return res.json({ success: true, lesson: saved });
-    }
-
-    if (IS_PRODUCTION) return dbUnavailable(res);
-    const index = memoryLessons.findIndex(l => l._id === id);
-    if (index === -1) return res.status(404).json({ success: false, message: 'Lesson plan not found' });
-    if (String(memoryLessons[index].teacherId) !== String(userId) && req.user.role !== 'admin') {
-      return res.status(403).json({ success: false, message: 'Access denied: You do not own this lesson plan' });
-    }
-
-    if (subject) memoryLessons[index].subject = subject;
-    if (overview) memoryLessons[index].overview = overview;
-    if (plan) memoryLessons[index].plan = plan;
-    if (language) memoryLessons[index].language = language;
-
-    return res.json({ success: true, lesson: memoryLessons[index] });
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
-  }
-};
-
-exports.deleteLessonPlan = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const userId = req.user.id || req.user._id;
-
-    if (getIsConnected()) {
-      const lesson = await Lesson.findById(id);
-      if (!lesson) return res.status(404).json({ success: false, message: 'Lesson plan not found' });
-      if (String(lesson.teacherId) !== String(userId) && req.user.role !== 'admin') {
-        return res.status(403).json({ success: false, message: 'Access denied: You do not own this lesson plan' });
-      }
-
-      await Lesson.deleteOne({ _id: id });
-      return res.json({ success: true, message: 'Lesson plan deleted successfully' });
-    }
-
-    if (IS_PRODUCTION) return dbUnavailable(res);
-    const index = memoryLessons.findIndex(l => l._id === id);
-    if (index === -1) return res.status(404).json({ success: false, message: 'Lesson plan not found' });
-    if (String(memoryLessons[index].teacherId) !== String(userId) && req.user.role !== 'admin') {
-      return res.status(403).json({ success: false, message: 'Access denied: You do not own this lesson plan' });
-    }
-
-    memoryLessons.splice(index, 1);
-    return res.json({ success: true, message: 'Lesson plan deleted successfully' });
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
-  }
-};
-
-exports.translateLessonPlan = async (req, res) => {
-  try {
-    const { lessonId, targetLang } = req.body;
-    let lesson = null;
-
-    if (getIsConnected()) {
-      lesson = await Lesson.findById(lessonId);
-    } else {
-      if (IS_PRODUCTION) return dbUnavailable(res);
-      lesson = memoryLessons.find(l => l._id === lessonId);
-    }
-
-    if (!lesson) {
-      return res.status(404).json({ success: false, message: 'Lesson plan not found' });
-    }
-
-    const userId = req.user.id || req.user._id;
-    if (String(lesson.teacherId) !== String(userId) && req.user.role !== 'admin') {
-      return res.status(403).json({ success: false, message: 'Access denied: You do not own this lesson plan' });
-    }
-
-    // Perform IBM Granite 20B Multilingual translation
-    const textToTranslate = JSON.stringify({
-      overview: lesson.overview,
-      topics: lesson.plan.map(p => p.topic)
-    });
-
-    const translatedText = await bobService.translateText(textToTranslate, targetLang || 'hi');
-
-    return res.json({
-      success: true,
-      translatedContent: translatedText,
-      targetLanguage: targetLang
-    });
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    if (error) return dbErr(res, error);
+    return res.status(201).json({ success: true, lesson: normalizeLesson(data), _aiMetadata: bobResult._aiMetadata });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
   }
 };
 
 exports.getLessons = async (req, res) => {
+  if (!isSupabaseConfigured()) return noDb(res);
   try {
-    const userId = req.user.id || req.user._id;
-    const filter = req.user.role === 'teacher' ? { teacherId: userId } : {};
-
-    if (getIsConnected()) {
-      const lessons = await Lesson.find(filter).sort({ createdAt: -1 });
-      return res.json({ success: true, lessons });
-    }
-
-    if (IS_PRODUCTION) return dbUnavailable(res);
-    const lessons = req.user.role === 'teacher'
-      ? memoryLessons.filter(l => String(l.teacherId) === String(userId))
-      : memoryLessons;
-    return res.json({ success: true, lessons });
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    const userId = req.user.id;
+    let query = supabase.from('lessons').select('*').order('created_at', { ascending: false });
+    if (req.user.role === 'teacher') query = query.eq('teacher_id', userId);
+    const { data, error } = await query;
+    if (error) return dbErr(res, error);
+    return res.json({ success: true, lessons: (data || []).map(normalizeLesson) });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
   }
 };
 
 exports.getLessonById = async (req, res) => {
+  if (!isSupabaseConfigured()) return noDb(res);
   try {
-    const { id } = req.params;
-    let lesson = null;
-    if (getIsConnected()) {
-      lesson = await Lesson.findById(id);
-    } else {
-      if (IS_PRODUCTION) return dbUnavailable(res);
-      lesson = memoryLessons.find(l => l._id === id);
-    }
+    const { data, error } = await supabase.from('lessons').select('*').eq('id', req.params.id).single();
+    if (error || !data) return res.status(404).json({ success: false, message: 'Lesson plan not found.' });
+    if (req.user.role === 'teacher' && data.teacher_id !== req.user.id)
+      return res.status(403).json({ success: false, message: 'Access denied.' });
+    return res.json({ success: true, lesson: normalizeLesson(data) });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
 
-    if (!lesson) {
-      return res.status(404).json({ success: false, message: 'Lesson plan not found' });
-    }
+exports.updateLessonPlan = async (req, res) => {
+  if (!isSupabaseConfigured()) return noDb(res);
+  try {
+    const { subject, overview, plan, language } = req.body;
+    const updates = {};
+    if (subject)  updates.subject  = subject;
+    if (overview) updates.overview = overview;
+    if (plan)     updates.plan     = plan;
+    if (language) updates.language = language;
 
-    const userId = req.user.id || req.user._id;
-    if (req.user.role === 'teacher' && String(lesson.teacherId) !== String(userId)) {
-      return res.status(403).json({ success: false, message: 'Access denied: You do not own this lesson plan' });
-    }
+    const { data, error } = await supabase
+      .from('lessons').update(updates)
+      .eq('id', req.params.id).eq('teacher_id', req.user.id)
+      .select().single();
+    if (error) return dbErr(res, error);
+    if (!data) return res.status(404).json({ success: false, message: 'Lesson not found or access denied.' });
+    return res.json({ success: true, lesson: normalizeLesson(data) });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
 
-    return res.json({ success: true, lesson });
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+exports.deleteLessonPlan = async (req, res) => {
+  if (!isSupabaseConfigured()) return noDb(res);
+  try {
+    const { error } = await supabase.from('lessons')
+      .delete().eq('id', req.params.id).eq('teacher_id', req.user.id);
+    if (error) return dbErr(res, error);
+    return res.json({ success: true, message: 'Lesson plan deleted.' });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+exports.translateLessonPlan = async (req, res) => {
+  if (!isSupabaseConfigured()) return noDb(res);
+  try {
+    const { lessonId, targetLang } = req.body;
+    const { data, error } = await supabase.from('lessons').select('*').eq('id', lessonId).single();
+    if (error || !data) return res.status(404).json({ success: false, message: 'Lesson plan not found.' });
+    if (data.teacher_id !== req.user.id && req.user.role !== 'admin')
+      return res.status(403).json({ success: false, message: 'Access denied.' });
+
+    const textToTranslate = JSON.stringify({ overview: data.overview, topics: (data.plan || []).map(p => p.topic) });
+    const translatedText = await bobService.translateText(textToTranslate, targetLang || 'hi');
+    return res.json({ success: true, translatedContent: translatedText, targetLanguage: targetLang });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
   }
 };
