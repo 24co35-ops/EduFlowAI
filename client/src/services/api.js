@@ -55,7 +55,9 @@ export const getQuizById = (id) => API.get(`/quizzes/${id}`);
 export const getAttempts = () => API.get('/quizzes/attempts');
 
 // Student & Analytics API
-export const generateFlashcards = (data) => API.post('/student/flashcards/generate', data);
+export const generateFlashcards = (data) => API.post('/student/flashcards/generate', data, {
+  headers: { 'Content-Type': 'multipart/form-data' }
+});
 export const getFlashcards = () => API.get('/student/flashcards');
 export const getStudentProgress = () => API.get('/student/progress');
 export const getTeacherAnalytics = () => API.get('/student/analytics');

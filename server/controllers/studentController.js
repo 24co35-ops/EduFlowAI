@@ -1,5 +1,6 @@
 const { supabase, isSupabaseConfigured } = require('../config/supabase');
 const bobService = require('../services/bob.service');
+const { extractTextFromBuffer } = require('../utils/pdfParser');
 
 const dbErr = (res, err) =>
   res.status(500).json({ success: false, message: err.message || 'Database error.' });
@@ -94,12 +95,47 @@ function calculateTopicMastery(attemptsForTopic) {
 exports.generateFlashcards = async (req, res) => {
   if (!isSupabaseConfigured()) return noDb(res);
   try {
-    const { text, title = 'Study Deck' } = req.body;
-    if (!text || text.trim().length === 0) {
-      return res.status(400).json({ success: false, message: 'Chapter text is required to generate flashcards' });
+    let { text = '', title = 'Study Deck' } = req.body;
+
+    // PDF takes priority over pasted text
+    if (req.file) {
+      const extracted = await extractTextFromBuffer(req.file.buffer, req.file.originalname);
+      if (extracted && extracted.trim().length > 0) {
+        text = extracted;
+        // Use filename as title if none provided
+        if (!req.body.title) title = req.file.originalname.replace(/\.pdf$/i, '');
+      } else {
+        return res.status(400).json({ success: false, message: 'Could not extract text from the uploaded PDF. Please try a different file or paste text instead.' });
+      }
     }
 
-    const bobDeck = await bobService.generateFlashcards(text, title);
+    if (!text || text.trim().length === 0) {
+      return res.status(400).json({ success: false, message: 'Chapter text or a PDF file is required to generate flashcards.' });
+    }
+
+    // Run flashcard generation and concept explanation in parallel
+    const [bobDeck, conceptReply] = await Promise.all([
+      bobService.generateFlashcards(text, title),
+      // ponytail: reuse solveDoubt with a concept-extraction prompt — no new AI method needed
+      bobService.solveDoubt(
+        `List the 4-5 key concepts from this chapter as a JSON array: [{"term":"...","explanation":"..."}]. Chapter: ${text.slice(0, 2000)}`,
+        [],
+        title
+      ).catch(() => null)
+    ]);
+
+    // Parse concepts — tolerate plain text fallback from AI
+    let concepts = [];
+    if (conceptReply) {
+      try {
+        const match = conceptReply.match(/\[.*\]/s);
+        if (match) concepts = JSON.parse(match[0]);
+      } catch (_) {
+        // ponytail: if AI returns prose instead of JSON, surface it as a single concept entry
+        concepts = [{ term: 'Chapter Overview', explanation: conceptReply.slice(0, 500) }];
+      }
+    }
+
     const userId = req.user.id;
     const cleanTitle = bobDeck?.title || title || 'Study Deck';
     const cleanSummary = bobDeck?.summary || '';
@@ -117,13 +153,14 @@ exports.generateFlashcards = async (req, res) => {
         return res.status(201).json({
           success: true,
           deck: normalizeFlashcard(data),
+          concepts,
           _aiMetadata: bobDeck?._aiMetadata
         });
       }
       console.warn('[Flashcards] Database insert note:', error?.message);
     }
 
-    // Resilient fallback: return AI generated deck with temporary id so student flow never breaks
+    // Resilient fallback: return AI generated deck so student flow never breaks
     const fallbackDeck = {
       id: 'deck-' + Date.now(),
       student_id: userId,
@@ -135,6 +172,7 @@ exports.generateFlashcards = async (req, res) => {
     return res.status(201).json({
       success: true,
       deck: normalizeFlashcard(fallbackDeck),
+      concepts,
       _aiMetadata: bobDeck?._aiMetadata
     });
   } catch (error) {
