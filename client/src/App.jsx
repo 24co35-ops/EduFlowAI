@@ -125,6 +125,7 @@ export default function App() {
 
               {/* Password Reset Routes (public) */}
               <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+              <Route path="/reset-password" element={<ResetPasswordPage />} />
               <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
 
               {/* Catch-all Fallback */}

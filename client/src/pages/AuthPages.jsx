@@ -15,6 +15,7 @@ import {
   AlertCircle
 } from 'lucide-react';
 import { loginUser, registerUser, forgotPassword, resetPassword } from '../services/api';
+import { supabase } from '../lib/supabaseClient';
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -575,6 +576,34 @@ export function ResetPasswordPage() {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
+  const [supabaseRecovery, setSupabaseRecovery] = useState(false);
+
+  React.useEffect(() => {
+    async function initRecoverySession() {
+      const hash = window.location.hash.startsWith('#') ? window.location.hash.substring(1) : window.location.hash;
+      const hashParams = new URLSearchParams(hash);
+      const accessToken = hashParams.get('access_token');
+      const refreshToken = hashParams.get('refresh_token');
+
+      if (accessToken && refreshToken && supabase) {
+        try {
+          const { error: sessionError } = await supabase.auth.setSession({
+            access_token: accessToken,
+            refresh_token: refreshToken
+          });
+          if (sessionError) {
+            console.error('[ResetPassword] setSession error:', sessionError.message);
+            setError(sessionError.message || 'Invalid or expired recovery link.');
+          } else {
+            setSupabaseRecovery(true);
+          }
+        } catch (err) {
+          console.error('[ResetPassword] session init error:', err);
+        }
+      }
+    }
+    initRecoverySession();
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -589,11 +618,18 @@ export function ResetPasswordPage() {
     setLoading(true);
     setError('');
     try {
-      const res = await resetPassword(token, password);
-      setMessage(res.data.message);
-      setTimeout(() => navigate('/login'), 2500);
+      if (supabaseRecovery && supabase) {
+        const { error: updateError } = await supabase.auth.updateUser({ password });
+        if (updateError) throw updateError;
+        setMessage('Password reset successfully. You can now log in.');
+        setTimeout(() => navigate('/login'), 2500);
+      } else {
+        const res = await resetPassword(token, password);
+        setMessage(res.data.message);
+        setTimeout(() => navigate('/login'), 2500);
+      }
     } catch (err) {
-      setError(err.response?.data?.message || 'Reset failed. The link may have expired.');
+      setError(err.response?.data?.message || err.message || 'Reset failed. The link may have expired.');
     } finally {
       setLoading(false);
     }

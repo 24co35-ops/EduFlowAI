@@ -268,11 +268,12 @@ exports.forgotPassword = async (req, res) => {
     const cleanEmail = String(email).trim().toLowerCase();
 
     if (isSupabaseConfigured()) {
-      await supabase.auth.admin.generateLink({
-        type: 'recovery',
-        email: cleanEmail,
-        options: { redirectTo: `${process.env.CLIENT_URL || 'http://localhost:5173'}/reset-password` }
+      const { error } = await supabase.auth.resetPasswordForEmail(cleanEmail, {
+        redirectTo: `${process.env.CLIENT_URL || 'http://localhost:5173'}/reset-password`
       });
+      if (error) {
+        console.error('[ForgotPassword] Supabase resetPasswordForEmail error:', error.message, error);
+      }
       return res.json({ success: true, message: 'If that email exists, a reset link has been sent.' });
     }
 
