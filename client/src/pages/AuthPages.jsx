@@ -24,10 +24,23 @@ const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 export function LoginPage({ setUser }) {
   const [email, setEmail] = useState('teacher@eduflow.ai');
   const [password, setPassword] = useState('teacher123');
+  const [selectedRole, setSelectedRole] = useState('teacher');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const navigate = useNavigate();
+
+  const handleSelectRole = (role) => {
+    setError('');
+    setSelectedRole(role);
+    if (role === 'teacher') {
+      setEmail('teacher@eduflow.ai');
+      setPassword('teacher123');
+    } else {
+      setEmail('student@eduflow.ai');
+      setPassword('student123');
+    }
+  };
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -73,17 +86,6 @@ export function LoginPage({ setUser }) {
     }
   };
 
-  const setDemoRole = (role) => {
-    setError('');
-    if (role === 'teacher') {
-      setEmail('teacher@eduflow.ai');
-      setPassword('teacher123');
-    } else {
-      setEmail('student@eduflow.ai');
-      setPassword('student123');
-    }
-  };
-
   return (
     <div className="min-h-[85vh] flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full glass-card p-8 rounded-3xl border border-slate-800 shadow-2xl space-y-6">
@@ -97,33 +99,37 @@ export function LoginPage({ setUser }) {
           <p className="text-xs text-slate-400">Intelligent Course Content Automation powered by IBM watsonx.ai</p>
         </div>
 
-        {/* Demo Quick-Select Buttons */}
-        <div className="p-3 rounded-2xl bg-slate-900/90 border border-slate-800 space-y-2">
-          <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider text-center">Quick Demo Accounts</p>
-          <div className="grid grid-cols-2 gap-2">
+        {/* Prominent Role Selectors: Teacher vs Student */}
+        <div className="space-y-2">
+          <div className="grid grid-cols-2 gap-3">
             <button
               type="button"
-              onClick={() => setDemoRole('teacher')}
-              className={`py-2 px-3 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition-all ${
-                email.includes('teacher') 
-                  ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/25' 
-                  : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+              onClick={() => handleSelectRole('teacher')}
+              className={`py-3 px-3 rounded-2xl border text-xs font-bold flex flex-col items-center justify-center gap-1 transition-all ${
+                selectedRole === 'teacher' || email.toLowerCase().includes('teacher')
+                  ? 'bg-indigo-600/20 border-indigo-500 text-indigo-200 shadow-lg shadow-indigo-600/20 ring-1 ring-indigo-500'
+                  : 'bg-slate-900/80 border-slate-800 text-slate-400 hover:bg-slate-800 hover:text-white'
               }`}
             >
-              👩‍🏫 Teacher Account
+              <span className="text-base">👩‍🏫</span>
+              <span>Sign in as Teacher</span>
             </button>
             <button
               type="button"
-              onClick={() => setDemoRole('student')}
-              className={`py-2 px-3 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition-all ${
-                email.includes('student') 
-                  ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/25' 
-                  : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+              onClick={() => handleSelectRole('student')}
+              className={`py-3 px-3 rounded-2xl border text-xs font-bold flex flex-col items-center justify-center gap-1 transition-all ${
+                selectedRole === 'student' || email.toLowerCase().includes('student')
+                  ? 'bg-emerald-600/20 border-emerald-500 text-emerald-200 shadow-lg shadow-emerald-600/20 ring-1 ring-emerald-500'
+                  : 'bg-slate-900/80 border-slate-800 text-slate-400 hover:bg-slate-800 hover:text-white'
               }`}
             >
-              🧑‍🎓 Student Account
+              <span className="text-base">🧑‍🎓</span>
+              <span>Sign in as Student</span>
             </button>
           </div>
+          <p className="text-[11px] text-slate-500 text-center font-medium">
+            Quick demo access for judges
+          </p>
         </div>
 
         {/* Error Notification */}
