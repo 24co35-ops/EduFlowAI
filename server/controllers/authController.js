@@ -160,7 +160,25 @@ exports.login = async (req, res) => {
 
     const cleanEmail = String(email).trim().toLowerCase();
 
-    // ---- Supabase path ----
+    // 1. Unconditionally reliable check for hardcoded demo credentials first
+    const isTeacherDemo = cleanEmail === 'teacher@eduflow.ai' && password === 'teacher123';
+    const isStudentDemo = cleanEmail === 'student@eduflow.ai' && password === 'student123';
+
+    if (isTeacherDemo || isStudentDemo) {
+      const demoUser = memoryUsers.find(u => u.email === cleanEmail);
+      if (demoUser) {
+        if (role && demoUser.role !== role) {
+          return res.status(403).json({
+            success: false,
+            message: `This account is registered as a ${demoUser.role}, not a ${role}. Please use the correct sign-in option.`
+          });
+        }
+        const token = generateToken(demoUser);
+        return res.json({ success: true, token, user: safeUserPayload(demoUser) });
+      }
+    }
+
+    // 2. Supabase path for real/registered accounts
     if (isSupabaseConfigured()) {
       const { data: authData, error: signInError } = await supabase.auth.signInWithPassword({
         email: cleanEmail,
@@ -168,37 +186,7 @@ exports.login = async (req, res) => {
       });
 
       if (signInError) {
-        // Auto-seed built-in demo accounts in Supabase if not yet provisioned
-        const isTeacherDemo = cleanEmail === 'teacher@eduflow.ai' && password === 'teacher123';
-        const isStudentDemo = cleanEmail === 'student@eduflow.ai' && password === 'student123';
-        if (isTeacherDemo || isStudentDemo) {
-          const demoRole = isTeacherDemo ? 'teacher' : 'student';
-          const demoName = isTeacherDemo ? 'Anita Sharma' : 'Rohan Gupta';
-          const { data: createdDemo, error: createError } = await supabase.auth.admin.createUser({
-            email: cleanEmail,
-            password,
-            email_confirm: true,
-            user_metadata: { full_name: demoName, role: demoRole, institution: 'Delhi Public School', grade: 'Class 10' }
-          });
-          if (!createError && createdDemo?.user) {
-            const user = {
-              id: createdDemo.user.id,
-              name: demoName,
-              email: cleanEmail,
-              role: demoRole,
-              institution: 'Delhi Public School',
-              grade: 'Class 10'
-            };
-            if (role && user.role !== role) {
-              return res.status(403).json({
-                success: false,
-                message: `This account is registered as a ${user.role}, not a ${role}. Please use the correct sign-in option.`
-              });
-            }
-            const token = generateToken(user);
-            return res.json({ success: true, token, user: safeUserPayload(user) });
-          }
-        }
+        console.error('[Login] Supabase signInWithPassword error:', signInError.message, 'Status:', signInError.status || 401, signInError);
         return res.status(401).json({ success: false, message: 'Invalid email or password.' });
       }
 
@@ -235,7 +223,7 @@ exports.login = async (req, res) => {
       return res.json({ success: true, token, user: safeUserPayload(user) });
     }
 
-    // ---- In-memory fallback (when Supabase is unconfigured) ----
+    // 3. In-memory fallback (when Supabase is unconfigured)
     const foundUser = memoryUsers.find(u => u.email === cleanEmail);
     if (!foundUser) {
       return res.status(401).json({ success: false, message: 'Invalid email or password.' });
