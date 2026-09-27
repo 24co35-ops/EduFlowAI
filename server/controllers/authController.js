@@ -5,14 +5,12 @@ const { supabase, isSupabaseConfigured } = require('../config/supabase');
 const { JWT_SECRET } = require('../middleware/auth');
 const { sendResetEmail } = require('../utils/mailer');
 
-const IS_PRODUCTION = process.env.NODE_ENV === 'production';
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 // ---------------------------------------------------------------------------
-// In-memory fallback — dev/demo only (never reached in production when
-// Supabase is configured).
+// In-memory fallback — used when Supabase is unconfigured or in offline demo mode.
 // ---------------------------------------------------------------------------
-const memoryUsers = IS_PRODUCTION ? [] : [
+const memoryUsers = [
   {
     id: 'demo-teacher-1',
     name: 'Anita Sharma',
@@ -35,13 +33,7 @@ const memoryUsers = IS_PRODUCTION ? [] : [
 
 const memResetTokens = new Map();
 
-const dbUnavailable = (res) =>
-  res.status(503).json({
-    success: false,
-    message: 'Service temporarily unavailable. Please configure SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY.'
-  });
-
-// ponytail: one token shape for both Supabase and memory users
+// ponytail: unified JWT generator
 const generateToken = (user) =>
   jwt.sign(
     { id: user.id, email: user.email, role: user.role, name: user.name },
@@ -83,7 +75,7 @@ exports.register = async (req, res) => {
 
     // ---- Supabase path ----
     if (isSupabaseConfigured()) {
-      // 1. Create auth user
+      // 1. Create auth user in Supabase
       const { data: authData, error: signUpError } = await supabase.auth.admin.createUser({
         email: cleanEmail,
         password,
@@ -97,7 +89,6 @@ exports.register = async (req, res) => {
       });
 
       if (signUpError) {
-        // Surface real Supabase error messages to the frontend
         const msg = signUpError.message || 'Registration failed.';
         const isDuplicate = msg.toLowerCase().includes('already') || msg.toLowerCase().includes('duplicate') || signUpError.status === 422;
         return res.status(isDuplicate ? 400 : 500).json({
@@ -108,21 +99,20 @@ exports.register = async (req, res) => {
 
       const userId = authData.user.id;
 
-      // 2. Upsert into profiles table
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .upsert({
-          id: userId,
-          email: cleanEmail,
-          full_name: name.trim(),
-          role: assignedRole,
-          institution: institution || 'EduFlow Academy',
-          grade: grade || 'Class 10'
-        }, { onConflict: 'id' });
-
-      if (profileError) {
-        console.error('[Register] Profile upsert error:', profileError.message);
-        // Non-fatal — auth user is created; profile sync can be repaired later
+      // 2. Upsert into profiles table (non-fatal if table not created yet)
+      try {
+        await supabase
+          .from('profiles')
+          .upsert({
+            id: userId,
+            email: cleanEmail,
+            full_name: name.trim(),
+            role: assignedRole,
+            institution: institution || 'EduFlow Academy',
+            grade: grade || 'Class 10'
+          }, { onConflict: 'id' });
+      } catch (profileErr) {
+        console.warn('[Register] Profile table note:', profileErr.message);
       }
 
       const newUser = { id: userId, name: name.trim(), email: cleanEmail, role: assignedRole, institution: institution || 'EduFlow Academy', grade: grade || 'Class 10' };
@@ -131,9 +121,7 @@ exports.register = async (req, res) => {
       return res.status(201).json({ success: true, token, user: safeUserPayload(newUser) });
     }
 
-    // ---- In-memory fallback ----
-    if (IS_PRODUCTION) return dbUnavailable(res);
-
+    // ---- In-memory fallback (when Supabase is unconfigured) ----
     const existingMem = memoryUsers.find(u => u.email === cleanEmail);
     if (existingMem) {
       return res.status(400).json({ success: false, message: 'User with this email already exists.' });
@@ -155,8 +143,8 @@ exports.register = async (req, res) => {
     return res.status(201).json({ success: true, token, user: safeUserPayload(newMemUser) });
 
   } catch (error) {
-    console.error('[Register] Unexpected error:', error.message);
-    res.status(500).json({ success: false, message: error.message || 'Registration failed. Please try again.' });
+    console.error('[Register] Error:', error.message);
+    return res.status(500).json({ success: false, message: error.message || 'Registration failed. Please try again.' });
   }
 };
 
@@ -209,11 +197,17 @@ exports.login = async (req, res) => {
       }
 
       // Fetch profile for role/name/institution
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('full_name, role, institution, grade')
-        .eq('id', authData.user.id)
-        .single();
+      let profile = null;
+      try {
+        const { data } = await supabase
+          .from('profiles')
+          .select('full_name, role, institution, grade')
+          .eq('id', authData.user.id)
+          .single();
+        profile = data;
+      } catch (profileFetchErr) {
+        // Fallback to user_metadata below
+      }
 
       const user = {
         id: authData.user.id,
@@ -228,9 +222,7 @@ exports.login = async (req, res) => {
       return res.json({ success: true, token, user: safeUserPayload(user) });
     }
 
-    // ---- In-memory fallback ----
-    if (IS_PRODUCTION) return dbUnavailable(res);
-
+    // ---- In-memory fallback (when Supabase is unconfigured) ----
     const foundUser = memoryUsers.find(u => u.email === cleanEmail);
     if (!foundUser) {
       return res.status(401).json({ success: false, message: 'Invalid email or password.' });
@@ -245,8 +237,8 @@ exports.login = async (req, res) => {
     return res.json({ success: true, token, user: safeUserPayload(foundUser) });
 
   } catch (error) {
-    console.error('[Login] Unexpected error:', error.message);
-    res.status(500).json({ success: false, message: error.message || 'Login failed. Please try again.' });
+    console.error('[Login] Error:', error.message);
+    return res.status(500).json({ success: false, message: error.message || 'Login failed. Please try again.' });
   }
 };
 
@@ -254,7 +246,6 @@ exports.login = async (req, res) => {
 // GET ME
 // ---------------------------------------------------------------------------
 exports.getMe = async (req, res) => {
-  // req.user is already decoded from JWT by protect middleware
   res.json({ success: true, user: req.user });
 };
 
@@ -269,19 +260,15 @@ exports.forgotPassword = async (req, res) => {
     const cleanEmail = String(email).trim().toLowerCase();
 
     if (isSupabaseConfigured()) {
-      // Supabase handles the reset email internally
       await supabase.auth.admin.generateLink({
         type: 'recovery',
         email: cleanEmail,
         options: { redirectTo: `${process.env.CLIENT_URL || 'http://localhost:5173'}/reset-password` }
       });
-      // Always return success (user enumeration protection)
       return res.json({ success: true, message: 'If that email exists, a reset link has been sent.' });
     }
 
     // ---- In-memory fallback ----
-    if (IS_PRODUCTION) return dbUnavailable(res);
-
     const memUser = memoryUsers.find(u => u.email === cleanEmail);
     if (memUser) {
       const token = crypto.randomBytes(32).toString('hex');
@@ -294,7 +281,7 @@ exports.forgotPassword = async (req, res) => {
     return res.json({ success: true, message: 'If that email exists, a reset link has been sent.' });
   } catch (error) {
     console.error('[ForgotPassword] Error:', error.message);
-    res.status(500).json({ success: false, message: error.message });
+    return res.status(500).json({ success: false, message: error.message });
   }
 };
 
@@ -306,14 +293,12 @@ exports.resetPassword = async (req, res) => {
     const { token } = req.params;
     const { password } = req.body;
 
-    if (!password || password.length < 6) {
-      return res.status(400).json({ success: false, message: 'Password must be at least 6 characters.' });
+    if (!password || password.length < 8) {
+      return res.status(400).json({ success: false, message: 'Password must be at least 8 characters long.' });
     }
 
     // ---- In-memory fallback only (Supabase reset is handled client-side via magic link) ----
     if (!isSupabaseConfigured()) {
-      if (IS_PRODUCTION) return dbUnavailable(res);
-
       const entry = memResetTokens.get(token);
       if (!entry || entry.expiry < new Date()) {
         return res.status(400).json({ success: false, message: 'Reset link is invalid or has expired.' });
@@ -326,6 +311,7 @@ exports.resetPassword = async (req, res) => {
 
     return res.json({ success: true, message: 'Password reset successfully. You can now log in.' });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    console.error('[ResetPassword] Error:', error.message);
+    return res.status(500).json({ success: false, message: error.message });
   }
 };
