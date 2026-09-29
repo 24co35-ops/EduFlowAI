@@ -198,12 +198,13 @@ export default function MakerLandingPage() {
           WebkitBackdropFilter: 'blur(12px)'
         }}
       >
-        {/* Wordmark with trailing blue period */}
+        {/* Wordmark with trailing blue period and emblem */}
         <Link
           to="/"
-          className="font-newsreader text-[19px] font-medium tracking-tight text-[#141C2B] hover:opacity-80 transition-opacity"
+          className="flex items-center gap-2.5 font-newsreader text-[19px] font-medium tracking-tight text-[#141C2B] hover:opacity-80 transition-opacity"
         >
-          EduFlow<span className="text-[#2C4A8F]">.</span>
+          <img src="/logo.jpg" alt="EduFlow AI Emblem" className="w-7 h-7 border border-[#141C2B]/20 object-cover" />
+          <span>EduFlow<span className="text-[#2C4A8F]">.</span></span>
         </Link>
 
         {/* Monospaced Uppercase Nav Links */}

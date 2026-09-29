@@ -70,8 +70,8 @@ export default function Navbar({ user, setUser }) {
             
             {/* Logo & Title */}
             <Link to="/" className="flex items-center gap-3 group" onClick={() => setMobileMenuOpen(false)}>
-              <div className="w-9 h-9 bg-[#141C2B] text-[#EFE9DD] border border-[rgba(20,28,43,0.2)] flex items-center justify-center transition-transform group-hover:bg-[#2C4A8F]">
-                <Sparkles className="w-4 h-4 text-[#EFE9DD]" />
+              <div className="w-9 h-9 border border-[rgba(20,28,43,0.2)] flex items-center justify-center transition-transform group-hover:border-[#2C4A8F] overflow-hidden bg-[#EFE9DD]">
+                <img src="/logo.jpg" alt="EduFlow AI Logo" className="w-full h-full object-cover" />
               </div>
               <div>
                 <div className="flex items-center gap-2">
