@@ -12,7 +12,8 @@ import {
   Upload,
   X,
   Lightbulb,
-  Brain
+  Brain,
+  ShieldCheck
 } from 'lucide-react';
 import { generateFlashcards, getFlashcards } from '../services/api';
 import AIEvidenceBadge from '../components/AIEvidenceBadge';
@@ -50,7 +51,6 @@ export default function FlashcardsPage() {
     }
     setError('');
     setPdfFile(file);
-    // Auto-fill title from filename
     setTitle(file.name.replace(/\.pdf$/i, ''));
   };
 
@@ -70,7 +70,6 @@ export default function FlashcardsPage() {
     setIsFlipped(false);
     setCardIndex(0);
 
-    // Always send FormData so the endpoint receives multipart
     const fd = new FormData();
     fd.append('title', title);
     if (pdfFile) {
@@ -108,51 +107,55 @@ export default function FlashcardsPage() {
   const activeCard = currentDeck?.cards?.[cardIndex];
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
 
       {/* Header */}
-      <div>
-        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-purple-500/10 border border-purple-500/20 text-purple-300 text-xs font-semibold mb-2">
-          <Layers className="w-3.5 h-3.5" /> Feature F5: Flashcard &amp; Summary Engine
+      <div className="bg-[#E5DED0] border border-[rgba(20,28,43,0.16)] p-6">
+        <div className="inline-flex items-center gap-1.5 text-[10px] mono-label text-[#2C4A8F] mb-1">
+          <Layers className="w-3.5 h-3.5" /> [ CURRICULUM STUDY DECK LEDGER • FEATURE F5 ]
         </div>
-        <h1 className="text-3xl font-extrabold text-white font-outfit">Instant Flashcard &amp; Summary Generator</h1>
-        <p className="text-xs text-slate-400">Upload a PDF or paste chapter content to get interactive study cards and concept explanations</p>
+        <h1 className="serif-display text-3xl font-bold">
+          Instant Flashcard &amp; <span className="serif-italic">Summary Engine</span>
+        </h1>
+        <p className="text-xs text-[#4A5364]">
+          Upload a PDF or paste syllabus notes to generate calibrated study cards, key concept extractions, and structured chapter summaries.
+        </p>
       </div>
 
       {/* Grid Layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
 
         {/* Input Controls */}
         <div className="lg:col-span-5 space-y-6">
-          <form onSubmit={handleGenerateDeck} className="glass-card p-6 rounded-3xl border border-slate-800 space-y-5">
-            <h3 className="text-base font-bold text-white font-outfit flex items-center gap-2">
-              <FileText className="w-5 h-5 text-purple-400" /> Source Chapter Input
+          <form onSubmit={handleGenerateDeck} className="bg-[#E5DED0] p-6 border border-[rgba(20,28,43,0.16)] space-y-4">
+            <h3 className="serif-display text-lg font-bold flex items-center gap-2">
+              <FileText className="w-4 h-4 text-[#2C4A8F]" /> Source Chapter Input
             </h3>
 
             {/* Deck Title */}
             <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1">Deck Title</label>
+              <label className="block mono-label text-[10px] text-[#767E8C] mb-1">DECK TITLE</label>
               <input
                 type="text"
                 value={title}
                 onChange={e => setTitle(e.target.value)}
                 required
-                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-white text-xs focus:outline-none focus:border-purple-500"
+                className="w-full px-3.5 py-2 bg-[#EFE9DD] border border-[rgba(20,28,43,0.2)] text-xs mono-label text-[#141C2B] focus:outline-none focus:border-[#141C2B]"
                 placeholder="e.g. Chapter 4 Chemistry"
               />
             </div>
 
             {/* PDF Upload Zone */}
             <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1">Upload PDF (optional)</label>
+              <label className="block mono-label text-[10px] text-[#767E8C] mb-1">UPLOAD PDF SYLLABUS (OPTIONAL)</label>
               {pdfFile ? (
-                <div className="flex items-center gap-2 px-3.5 py-2.5 rounded-xl bg-slate-900 border border-purple-500/40 text-xs text-purple-200">
-                  <FileText className="w-4 h-4 text-purple-400 shrink-0" />
+                <div className="flex items-center gap-2 px-3.5 py-2.5 bg-[#EFE9DD] border border-[rgba(44,74,143,0.3)] text-xs mono-label text-[#141C2B]">
+                  <FileText className="w-4 h-4 text-[#2C4A8F] shrink-0" />
                   <span className="truncate flex-1">{pdfFile.name}</span>
                   <button
                     type="button"
                     onClick={clearFile}
-                    className="text-slate-400 hover:text-red-400 transition-colors"
+                    className="text-[#767E8C] hover:text-[#141C2B]"
                     aria-label="Remove file"
                   >
                     <X className="w-4 h-4" />
@@ -164,18 +167,17 @@ export default function FlashcardsPage() {
                   onDragLeave={() => setDragOver(false)}
                   onDrop={handleFileDrop}
                   onClick={() => fileInputRef.current?.click()}
-                  className={`flex flex-col items-center justify-center gap-2 px-4 py-6 rounded-xl border-2 border-dashed cursor-pointer transition-all ${
+                  className={`flex flex-col items-center justify-center gap-2 px-4 py-6 border-2 border-dashed cursor-pointer transition-all bg-[#EFE9DD] ${
                     dragOver
-                      ? 'border-purple-400 bg-purple-500/10'
-                      : 'border-slate-700 bg-slate-900/50 hover:border-purple-500/50 hover:bg-slate-900'
+                      ? 'border-[#2C4A8F]'
+                      : 'border-[rgba(20,28,43,0.2)] hover:border-[#141C2B]'
                   }`}
                 >
-                  <Upload className={`w-6 h-6 ${dragOver ? 'text-purple-400' : 'text-slate-500'}`} />
-                  <p className="text-xs text-slate-400 text-center">
-                    Drag &amp; drop a <span className="text-purple-300 font-semibold">.pdf</span> or{' '}
-                    <span className="text-purple-400 font-semibold underline cursor-pointer">browse</span>
+                  <Upload className="w-5 h-5 text-[#2C4A8F]" />
+                  <p className="mono-label text-xs text-[#141C2B] text-center">
+                    Drag &amp; drop a <span className="text-[#2C4A8F] font-bold">.pdf</span> or browse
                   </p>
-                  <p className="text-[10px] text-slate-500">Max 10 MB · PDF only</p>
+                  <p className="mono-label text-[9px] text-[#767E8C]">Max 10 MB · Textbook PDF</p>
                 </div>
               )}
               <input
@@ -191,37 +193,37 @@ export default function FlashcardsPage() {
             {/* Paste Text (shown only when no PDF) */}
             {!pdfFile && (
               <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">
-                  Or Paste Chapter / Lecture Notes
+                <label className="block mono-label text-[10px] text-[#767E8C] mb-1">
+                  OR PASTE CHAPTER / LECTURE NOTES
                 </label>
                 <textarea
                   rows={6}
                   value={chapterText}
                   onChange={e => setChapterText(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-white text-xs focus:outline-none focus:border-purple-500 font-sans"
-                  placeholder="Paste chapter text..."
+                  className="w-full px-3.5 py-2.5 bg-[#EFE9DD] border border-[rgba(20,28,43,0.2)] text-xs text-[#141C2B] focus:outline-none focus:border-[#141C2B] font-typewriter"
+                  placeholder="Paste chapter notes here..."
                 />
               </div>
             )}
 
             {error && (
-              <p className="text-xs text-red-400 font-medium">{error}</p>
+              <p className="mono-label text-xs text-[#141C2B] font-bold">{error}</p>
             )}
 
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-3.5 px-4 rounded-xl bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white text-xs font-bold shadow-lg shadow-purple-600/30 flex items-center justify-center gap-2 transition-all disabled:opacity-50"
+              className="btn-filled w-full justify-center text-[10px] py-2.5 disabled:opacity-50"
             >
               {loading ? (
                 <>
-                  <Loader2 className="w-4 h-4 animate-spin text-white" />
-                  <span>{pdfFile ? 'Extracting PDF & Generating...' : 'IBM BOB Generating Flashcards...'}</span>
+                  <Loader2 className="w-4 h-4 animate-spin text-[#EFE9DD]" />
+                  <span>[ EXTRACTING PDF &amp; COMPILING DECK... ]</span>
                 </>
               ) : (
                 <>
-                  <Sparkles className="w-4 h-4 text-purple-200" />
-                  <span>Generate Flashcards &amp; Concepts</span>
+                  <Sparkles className="w-3.5 h-3.5" />
+                  <span>[ GENERATE FLASHCARDS &amp; CONCEPTS ]</span>
                 </>
               )}
             </button>
@@ -237,64 +239,64 @@ export default function FlashcardsPage() {
               <AIEvidenceBadge metadata={aiMetadata} />
 
               {/* Summary Box */}
-              <div className="glass-card p-6 rounded-3xl border border-slate-800 space-y-3">
-                <h3 className="text-sm font-bold text-indigo-300 font-outfit uppercase tracking-wider flex items-center gap-2">
-                  <BookOpen className="w-4 h-4 text-indigo-400" /> IBM BOB Chapter Summary
+              <div className="bg-[#E5DED0] p-6 border border-[rgba(20,28,43,0.16)] space-y-3">
+                <h3 className="mono-label text-xs text-[#2C4A8F] flex items-center gap-2">
+                  <BookOpen className="w-3.5 h-3.5" /> [ IBM BOB CHAPTER SUMMARY ]
                 </h3>
-                <div className="p-4 rounded-2xl bg-slate-900/90 border border-slate-800 text-xs text-slate-300 leading-relaxed whitespace-pre-wrap">
+                <div className="p-4 bg-[#EFE9DD] border border-[rgba(20,28,43,0.14)] text-xs text-[#141C2B] leading-relaxed whitespace-pre-wrap">
                   {currentDeck.summary}
                 </div>
               </div>
 
               {/* 3D Flip Card */}
               {activeCard && (
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-semibold text-slate-400">
-                      Card {cardIndex + 1} of {currentDeck.cards?.length}
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between mono-label text-xs">
+                    <span className="text-[#767E8C]">
+                      [ CARD {cardIndex + 1} OF {currentDeck.cards?.length} ]
                     </span>
                     <button
                       onClick={() => setIsFlipped(!isFlipped)}
-                      className="text-xs font-semibold text-purple-400 hover:underline flex items-center gap-1"
+                      className="text-[#2C4A8F] hover:underline flex items-center gap-1"
                     >
-                      <RotateCw className="w-3.5 h-3.5" /> Flip Card (Click anywhere)
+                      <RotateCw className="w-3.5 h-3.5" /> [ FLIP CARD ]
                     </button>
                   </div>
 
                   <div
                     onClick={() => setIsFlipped(!isFlipped)}
-                    className="cursor-pointer min-h-[220px] rounded-3xl p-8 glass-card border border-purple-500/30 bg-gradient-to-br from-slate-900 via-purple-950/20 to-slate-900 flex flex-col justify-between transition-all duration-300 hover:border-purple-500/60 shadow-xl relative"
+                    className="cursor-pointer min-h-[220px] p-8 bg-[#EFE9DD] border border-[rgba(20,28,43,0.2)] flex flex-col justify-between transition-all hover:border-[#141C2B] relative"
                   >
                     <div className="flex items-center justify-between">
-                      <span className="px-2.5 py-0.5 rounded-full bg-purple-500/10 text-purple-300 border border-purple-500/20 text-[10px] font-bold uppercase">
-                        {isFlipped ? 'Answer / Definition (Back)' : 'Question / Term (Front)'}
+                      <span className="tag-proficient text-[9px]">
+                        [ {isFlipped ? 'ANSWER / DEFINITION' : 'QUESTION / TERM'} ]
                       </span>
-                      <Sparkles className="w-4 h-4 text-purple-400 opacity-60" />
+                      <Sparkles className="w-4 h-4 text-[#2C4A8F]" />
                     </div>
 
                     <div className="my-6 text-center">
-                      <p className={`font-outfit transition-all ${isFlipped ? 'text-lg font-bold text-emerald-300' : 'text-xl font-bold text-white'}`}>
+                      <p className={`serif-display transition-all ${isFlipped ? 'text-lg font-bold text-[#2C4A8F]' : 'text-xl font-bold text-[#141C2B]'}`}>
                         {isFlipped ? activeCard.back : activeCard.front}
                       </p>
                     </div>
 
-                    <div className="text-center">
-                      <span className="text-[10px] text-slate-500 font-medium">Click card to reveal details</span>
+                    <div className="text-center mono-label text-[10px] text-[#767E8C]">
+                      [ Click to rotate card ]
                     </div>
                   </div>
 
-                  <div className="flex items-center justify-between pt-2">
+                  <div className="flex items-center justify-between pt-1">
                     <button
                       onClick={handlePrevCard}
-                      className="px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 text-xs font-semibold flex items-center gap-1 transition-colors"
+                      className="btn-outline text-[10px] py-1.5 px-3 flex items-center gap-1"
                     >
-                      <ChevronLeft className="w-4 h-4" /> Previous
+                      <ChevronLeft className="w-3.5 h-3.5" /> [ Previous ]
                     </button>
                     <button
                       onClick={handleNextCard}
-                      className="px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 text-xs font-semibold flex items-center gap-1 transition-colors"
+                      className="btn-filled text-[10px] py-1.5 px-3 flex items-center gap-1"
                     >
-                      Next <ChevronRight className="w-4 h-4" />
+                      [ Next ] <ChevronRight className="w-3.5 h-3.5" />
                     </button>
                   </div>
                 </div>
@@ -302,21 +304,15 @@ export default function FlashcardsPage() {
 
               {/* Concepts Explained */}
               {concepts.length > 0 && (
-                <div className="glass-card p-6 rounded-3xl border border-emerald-500/20 space-y-4">
-                  <h3 className="text-sm font-bold text-emerald-300 font-outfit uppercase tracking-wider flex items-center gap-2">
-                    <Brain className="w-4 h-4 text-emerald-400" /> Concepts Explained
-                    <span className="text-[10px] font-normal text-slate-500 normal-case tracking-normal">— key ideas from your chapter, simplified</span>
+                <div className="bg-[#E5DED0] p-6 border border-[rgba(20,28,43,0.16)] space-y-3">
+                  <h3 className="mono-label text-xs text-[#2C4A8F] flex items-center gap-2">
+                    <Brain className="w-3.5 h-3.5" /> [ CONCEPTS EXTRACTED FROM CHAPTER ]
                   </h3>
-                  <div className="space-y-3">
+                  <div className="space-y-2.5">
                     {concepts.map((c, i) => (
-                      <div key={i} className="flex gap-3 p-3.5 rounded-2xl bg-slate-900/80 border border-slate-800">
-                        <div className="flex-shrink-0 w-7 h-7 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
-                          <Lightbulb className="w-3.5 h-3.5 text-emerald-400" />
-                        </div>
-                        <div>
-                          <p className="text-xs font-bold text-emerald-200 mb-0.5">{c.term}</p>
-                          <p className="text-xs text-slate-400 leading-relaxed">{c.explanation}</p>
-                        </div>
+                      <div key={i} className="p-3 bg-[#EFE9DD] border border-[rgba(20,28,43,0.14)] space-y-1">
+                        <p className="mono-label text-xs text-[#2C4A8F]">{c.term}</p>
+                        <p className="text-xs text-[#4A5364] leading-relaxed">{c.explanation}</p>
                       </div>
                     ))}
                   </div>
@@ -325,13 +321,13 @@ export default function FlashcardsPage() {
 
             </div>
           ) : (
-            <div className="glass-card p-12 rounded-3xl border border-slate-800 text-center space-y-4">
-              <div className="w-16 h-16 rounded-2xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400 mx-auto">
-                <Layers className="w-8 h-8" />
+            <div className="bg-[#E5DED0] p-12 border border-[rgba(20,28,43,0.16)] text-center space-y-3">
+              <div className="w-12 h-12 border border-[rgba(20,28,43,0.2)] bg-[#EFE9DD] flex items-center justify-center text-[#2C4A8F] mx-auto">
+                <Layers className="w-6 h-6" />
               </div>
-              <h3 className="text-lg font-bold text-white font-outfit">No Flashcard Deck Created</h3>
-              <p className="text-xs text-slate-400 max-w-sm mx-auto">
-                Upload a PDF or paste chapter text to let IBM BOB construct interactive flashcards, summaries, and concept explanations.
+              <h3 className="serif-display text-xl font-bold">No Study Deck Active</h3>
+              <p className="text-xs text-[#4A5364] max-w-sm mx-auto">
+                Upload a course textbook chapter or paste lecture notes to let IBM BOB compile interactive study cards and concept summaries.
               </p>
             </div>
           )}

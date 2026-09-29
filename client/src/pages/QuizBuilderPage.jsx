@@ -11,7 +11,8 @@ import {
   RotateCw,
   Plus,
   Trash2,
-  Check
+  Check,
+  ShieldCheck
 } from 'lucide-react';
 import { generateQuiz, getQuizzes, updateQuiz, regenerateQuestion } from '../services/api';
 import AIEvidenceBadge from '../components/AIEvidenceBadge';
@@ -124,20 +125,22 @@ export default function QuizBuilderPage() {
   };
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="bg-[#E5DED0] border border-[rgba(20,28,43,0.16)] p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-purple-500/10 border border-purple-500/20 text-purple-300 text-xs font-semibold mb-2">
-            <Zap className="w-3.5 h-3.5" /> Feature F2: IBM BOB Auto Quiz Engine
+          <div className="inline-flex items-center gap-1.5 text-[10px] mono-label text-[#2C4A8F] mb-1">
+            <Zap className="w-3.5 h-3.5" /> [ ASSESSMENT SPECIFICATION &amp; AUTHORING LEDGER • FEATURE F2 ]
           </div>
-          <h1 className="text-3xl font-extrabold text-white font-outfit">Auto Quiz Builder</h1>
-          <p className="text-xs text-slate-400">Generate, customize, and edit assessment questions with IBM Granite models</p>
+          <h1 className="serif-display text-3xl font-bold">Auto Quiz Builder</h1>
+          <p className="text-xs text-[#4A5364]">
+            Generate, customize, and edit assessment items with IBM Granite foundation models.
+          </p>
         </div>
 
         {activeQuiz && (
-          <div className="flex items-center gap-2 self-start">
+          <div className="flex items-center gap-2 self-start sm:self-auto">
             <button
               onClick={() => {
                 if (isEditing) {
@@ -147,30 +150,26 @@ export default function QuizBuilderPage() {
                   setIsEditing(true);
                 }
               }}
-              className={`px-3.5 py-2 rounded-xl border text-xs font-bold flex items-center gap-1.5 transition-colors ${
-                isEditing
-                  ? 'bg-amber-500/20 text-amber-300 border-amber-500/30'
-                  : 'bg-slate-900 border-slate-700 text-slate-300 hover:bg-slate-800'
-              }`}
+              className="btn-outline text-[10px] py-1.5 px-3 flex items-center gap-1.5"
             >
-              <Edit3 className="w-3.5 h-3.5" /> {isEditing ? 'Cancel Edit' : 'Edit Questions'}
+              <Edit3 className="w-3.5 h-3.5" /> [ {isEditing ? 'Cancel Edit' : 'Edit Questions'} ]
             </button>
 
             {isEditing ? (
               <button
                 onClick={handleSaveQuizEdits}
                 disabled={saving}
-                className="px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold flex items-center gap-1.5 shadow-md transition-all disabled:opacity-50"
+                className="btn-filled text-[10px] py-1.5 px-3 flex items-center gap-1.5 disabled:opacity-50"
               >
                 {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
-                <span>Save Changes</span>
+                <span>[ Save Changes ]</span>
               </button>
             ) : (
               <button
                 onClick={handlePublish}
-                className="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-bold shadow-lg shadow-emerald-600/25 flex items-center gap-2 transition-all"
+                className="btn-filled text-[10px] py-1.5 px-3 flex items-center gap-1.5"
               >
-                <Send className="w-4 h-4" /> Publish to Students
+                <Send className="w-3.5 h-3.5" /> [ Publish to Portal ]
               </button>
             )}
           </div>
@@ -178,62 +177,60 @@ export default function QuizBuilderPage() {
       </div>
 
       {publishedSuccess && (
-        <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-bold flex items-center justify-between animate-fade-in">
-          <div className="flex items-center gap-2">
-            <CheckCircle className="w-5 h-5" /> Quiz successfully published to student portal!
-          </div>
+        <div className="p-4 bg-[#EFE9DD] border border-[rgba(44,74,143,0.3)] text-[#2C4A8F] mono-label text-xs flex items-center gap-2 animate-fade-in">
+          <CheckCircle className="w-4 h-4" /> [ QUIZ SUCCESSFULLY PUBLISHED TO STUDENT PORTAL ]
         </div>
       )}
 
       {/* Grid Layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         
         {/* Input Controls */}
         <div className="lg:col-span-5 space-y-6">
           
-          <form onSubmit={handleGenerateQuiz} className="glass-card p-6 rounded-3xl border border-slate-800 space-y-5">
-            <h3 className="text-base font-bold text-white font-outfit flex items-center gap-2">
-              <Sparkles className="w-5 h-5 text-purple-400" /> Quiz Parameters
+          <form onSubmit={handleGenerateQuiz} className="bg-[#E5DED0] p-6 border border-[rgba(20,28,43,0.16)] space-y-4">
+            <h3 className="serif-display text-lg font-bold flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-[#2C4A8F]" /> Assessment Parameters
             </h3>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1">Topic or Chapter Title</label>
+              <label className="block mono-label text-[10px] text-[#767E8C] mb-1">TOPIC OR CHAPTER TITLE</label>
               <input
                 type="text"
                 value={topic}
                 onChange={(e) => setTopic(e.target.value)}
                 required
-                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-white text-xs focus:outline-none focus:border-purple-500"
+                className="w-full px-3.5 py-2 bg-[#EFE9DD] border border-[rgba(20,28,43,0.2)] text-xs mono-label text-[#141C2B] focus:outline-none focus:border-[#141C2B]"
                 placeholder="e.g. Newton Laws of Motion"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1">Difficulty Level</label>
+              <label className="block mono-label text-[10px] text-[#767E8C] mb-1">DIFFICULTY LEVEL</label>
               <div className="grid grid-cols-3 gap-2">
                 {['easy', 'medium', 'hard'].map((diff) => (
                   <button
                     key={diff}
                     type="button"
                     onClick={() => setDifficulty(diff)}
-                    className={`py-2 px-3 rounded-xl text-xs font-bold capitalize border transition-all ${
+                    className={`py-2 px-3 text-xs mono-label uppercase border transition-colors ${
                       difficulty === diff
-                        ? 'bg-purple-600 text-white border-purple-500 shadow-md'
-                        : 'bg-slate-900 text-slate-400 border-slate-800 hover:bg-slate-800'
+                        ? 'bg-[#141C2B] text-[#EFE9DD] border-[#141C2B]'
+                        : 'bg-[#EFE9DD] text-[#141C2B] border-[rgba(20,28,43,0.16)] hover:bg-[#E5DED0]'
                     }`}
                   >
-                    {diff}
+                    [ {diff} ]
                   </button>
                 ))}
               </div>
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1">Number of Questions</label>
+              <label className="block mono-label text-[10px] text-[#767E8C] mb-1">NUMBER OF QUESTIONS</label>
               <select
                 value={questionCount}
                 onChange={(e) => setQuestionCount(Number(e.target.value))}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-white text-xs focus:outline-none focus:border-purple-500"
+                className="w-full px-3.5 py-2 bg-[#EFE9DD] border border-[rgba(20,28,43,0.2)] text-xs mono-label text-[#141C2B] focus:outline-none focus:border-[#141C2B]"
               >
                 <option value={3}>3 Questions (Quick Check)</option>
                 <option value={4}>4 Questions (Standard)</option>
@@ -244,17 +241,17 @@ export default function QuizBuilderPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-3.5 px-4 rounded-xl bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white text-xs font-bold shadow-lg shadow-purple-600/30 flex items-center justify-center gap-2 transition-all disabled:opacity-50"
+              className="btn-filled w-full justify-center text-[10px] py-2.5 disabled:opacity-50"
             >
               {loading ? (
                 <>
-                  <Loader2 className="w-4 h-4 animate-spin text-white" />
-                  <span>IBM BOB Generating Questions...</span>
+                  <Loader2 className="w-3.5 h-3.5 animate-spin text-[#EFE9DD]" />
+                  <span>[ IBM BOB GENERATING QUESTIONS... ]</span>
                 </>
               ) : (
                 <>
-                  <Zap className="w-4 h-4 text-purple-200" />
-                  <span>Auto-Generate Quiz with IBM BOB</span>
+                  <Zap className="w-3.5 h-3.5" />
+                  <span>[ AUTO-GENERATE QUIZ WITH IBM BOB ]</span>
                 </>
               )}
             </button>
@@ -262,9 +259,9 @@ export default function QuizBuilderPage() {
 
           {/* Quiz List Selector */}
           {quizzes.length > 0 && (
-            <div className="glass-card p-5 rounded-3xl border border-slate-800 space-y-3">
-              <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Previously Generated Quizzes</h4>
-              <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+            <div className="bg-[#E5DED0] p-5 border border-[rgba(20,28,43,0.16)] space-y-3">
+              <h4 className="mono-label text-[10px] text-[#767E8C] uppercase">[ PREVIOUSLY GENERATED MODULES ]</h4>
+              <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
                 {quizzes.map((q) => (
                   <button
                     key={q._id}
@@ -273,15 +270,15 @@ export default function QuizBuilderPage() {
                       setEditedQuiz(JSON.parse(JSON.stringify(q)));
                       setIsEditing(false);
                     }}
-                    className={`w-full p-3 rounded-xl border text-left transition-all flex items-center justify-between text-xs font-semibold ${
+                    className={`w-full p-2.5 border text-left transition-colors flex items-center justify-between text-xs mono-label ${
                       activeQuiz?._id === q._id
-                        ? 'bg-purple-950/60 border-purple-500 text-white'
-                        : 'bg-slate-900 border-slate-800 text-slate-400 hover:bg-slate-800'
+                        ? 'bg-[#141C2B] text-[#EFE9DD] border-[#141C2B]'
+                        : 'bg-[#EFE9DD] text-[#141C2B] border-[rgba(20,28,43,0.16)] hover:bg-[#E5DED0]'
                     }`}
                   >
                     <span className="truncate">{q.topic}</span>
-                    <span className="px-2 py-0.5 rounded text-[9px] font-bold bg-purple-500/10 text-purple-300 border border-purple-500/20 capitalize">
-                      {q.difficulty}
+                    <span className="text-[9px] text-[#2C4A8F]">
+                      [{q.difficulty?.toUpperCase()}]
                     </span>
                   </button>
                 ))}
@@ -294,19 +291,18 @@ export default function QuizBuilderPage() {
         {/* Quiz Preview & Edit Render */}
         <div className="lg:col-span-7 space-y-6">
           {activeQuiz ? (
-            <div className="glass-card p-6 rounded-3xl border border-slate-800 space-y-6">
+            <div className="bg-[#E5DED0] p-6 border border-[rgba(20,28,43,0.16)] space-y-5">
               
-              {/* AI Evidence Badge */}
               <AIEvidenceBadge metadata={aiMetadata} />
 
-              <div className="flex items-center justify-between border-b border-slate-800 pb-4">
+              <div className="flex items-center justify-between border-b border-[rgba(20,28,43,0.16)] pb-3">
                 <div>
-                  <span className="px-2.5 py-0.5 rounded-full bg-purple-500/10 text-purple-300 border border-purple-500/20 text-[10px] font-bold uppercase">
-                    {isEditing ? 'Editing Mode' : 'Preview Mode'}
+                  <span className="tag-proficient text-[9px]">
+                    [ {isEditing ? 'EDITING MODE' : 'PREVIEW MODE'} ]
                   </span>
-                  <h2 className="text-xl font-bold text-white font-outfit mt-1">{activeQuiz.topic}</h2>
-                  <p className="text-xs text-slate-400">
-                    Difficulty: <span className="capitalize text-purple-300 font-semibold">{activeQuiz.difficulty}</span> • Total Questions: {(isEditing ? editedQuiz?.questions : activeQuiz.questions)?.length}
+                  <h2 className="serif-display text-xl font-bold mt-1">{activeQuiz.topic}</h2>
+                  <p className="mono-label text-[10px] text-[#767E8C] mt-0.5">
+                    DIFFICULTY: <span className="text-[#2C4A8F]">{activeQuiz.difficulty?.toUpperCase()}</span> • TOTAL QUESTIONS: {(isEditing ? editedQuiz?.questions : activeQuiz.questions)?.length}
                   </p>
                 </div>
               </div>
@@ -314,12 +310,12 @@ export default function QuizBuilderPage() {
               {/* Questions List */}
               <div className="space-y-4">
                 {(isEditing ? editedQuiz?.questions : activeQuiz.questions)?.map((q, idx) => (
-                  <div key={idx} className="p-5 rounded-2xl bg-slate-900/80 border border-slate-800 space-y-3">
+                  <div key={idx} className="p-4 bg-[#EFE9DD] border border-[rgba(20,28,43,0.16)] space-y-2.5">
                     
                     <div className="flex items-start justify-between gap-3">
-                      <div className="flex items-start gap-2.5 flex-1">
-                        <span className="w-6 h-6 rounded-lg bg-purple-600/20 text-purple-400 font-bold text-xs flex items-center justify-center border border-purple-500/30 flex-shrink-0 mt-0.5">
-                          Q{idx + 1}
+                      <div className="flex items-start gap-2 flex-1">
+                        <span className="w-6 h-6 border border-[rgba(20,28,43,0.2)] bg-[#E5DED0] text-[#141C2B] mono-label text-xs font-bold flex items-center justify-center flex-shrink-0">
+                          {idx + 1}
                         </span>
                         {isEditing ? (
                           <textarea
@@ -330,26 +326,26 @@ export default function QuizBuilderPage() {
                               updated[idx].question = e.target.value;
                               setEditedQuiz({ ...editedQuiz, questions: updated });
                             }}
-                            className="w-full text-xs font-bold text-white bg-slate-950 border border-slate-700 p-2 rounded-xl"
+                            className="w-full text-xs font-bold text-[#141C2B] bg-[#E5DED0] border border-[rgba(20,28,43,0.2)] p-2 font-typewriter"
                           />
                         ) : (
-                          <h4 className="text-xs font-bold text-white leading-relaxed">{q.question}</h4>
+                          <h4 className="serif-display text-sm font-bold text-[#141C2B] leading-relaxed mt-0.5">{q.question}</h4>
                         )}
                       </div>
 
                       <div className="flex items-center gap-1.5 flex-shrink-0">
-                        <span className="px-2 py-0.5 rounded text-[9px] font-bold bg-slate-800 text-slate-400 border border-slate-700 uppercase">
-                          {q.type}
+                        <span className="mono-label text-[9px] px-1.5 py-0.5 border border-[rgba(20,28,43,0.2)]">
+                          [{q.type?.toUpperCase()}]
                         </span>
                         {isEditing && (
                           <button
                             type="button"
                             onClick={() => handleRegenerateSingle(idx)}
                             disabled={regenIdx === idx}
-                            title="Regenerate this question with IBM BOB"
-                            className="p-1 rounded-lg bg-indigo-600/20 text-indigo-300 hover:bg-indigo-600 hover:text-white transition-colors"
+                            title="Regenerate this item with IBM BOB"
+                            className="btn-outline text-[9px] py-0.5 px-1.5"
                           >
-                            <RotateCw className={`w-3.5 h-3.5 ${regenIdx === idx ? 'animate-spin' : ''}`} />
+                            <RotateCw className={`w-3 h-3 ${regenIdx === idx ? 'animate-spin' : ''}`} />
                           </button>
                         )}
                       </div>
@@ -363,14 +359,14 @@ export default function QuizBuilderPage() {
                           return (
                             <div
                               key={oIdx}
-                              className={`p-2.5 rounded-xl border text-xs font-medium flex items-center justify-between ${
+                              className={`p-2 border text-xs mono-label flex items-center justify-between ${
                                 isCorrect
-                                  ? 'bg-emerald-950/40 border-emerald-500/50 text-emerald-300'
-                                  : 'bg-slate-950/50 border-slate-800 text-slate-400'
+                                  ? 'bg-[#E5DED0] border-[#2C4A8F] text-[#2C4A8F] font-bold'
+                                  : 'bg-[#E5DED0] border-[rgba(20,28,43,0.14)] text-[#141C2B]'
                               }`}
                             >
                               <span>{opt}</span>
-                              {isCorrect && <CheckCircle className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" />}
+                              {isCorrect && <CheckCircle className="w-3.5 h-3.5 text-[#2C4A8F] flex-shrink-0" />}
                             </div>
                           );
                         })}
@@ -379,8 +375,8 @@ export default function QuizBuilderPage() {
 
                     {/* Explanation */}
                     {q.explanation && (
-                      <div className="p-3 rounded-xl bg-purple-950/20 border border-purple-500/20 text-[11px] text-purple-200">
-                        <strong className="text-purple-300">IBM BOB Rationale:</strong> {q.explanation}
+                      <div className="p-2.5 bg-[#E5DED0] border border-[rgba(20,28,43,0.12)] text-[11px] text-[#4A5364]">
+                        <strong className="mono-label text-[#2C4A8F]">[ RATIONALE ]:</strong> {q.explanation}
                       </div>
                     )}
 
@@ -390,12 +386,12 @@ export default function QuizBuilderPage() {
 
             </div>
           ) : (
-            <div className="glass-card p-12 rounded-3xl border border-slate-800 text-center space-y-4">
-              <div className="w-16 h-16 rounded-2xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400 mx-auto">
-                <FileCheck2 className="w-8 h-8" />
+            <div className="bg-[#E5DED0] p-12 border border-[rgba(20,28,43,0.16)] text-center space-y-3">
+              <div className="w-12 h-12 border border-[rgba(20,28,43,0.2)] bg-[#EFE9DD] flex items-center justify-center text-[#2C4A8F] mx-auto">
+                <FileCheck2 className="w-6 h-6" />
               </div>
-              <h3 className="text-lg font-bold text-white font-outfit">No Quiz Selected</h3>
-              <p className="text-xs text-slate-400 max-w-sm mx-auto">
+              <h3 className="serif-display text-xl font-bold">No Module Selected</h3>
+              <p className="text-xs text-[#4A5364] max-w-sm mx-auto">
                 Enter a topic on the left to auto-generate multiple choice and short answer questions using IBM BOB.
               </p>
             </div>

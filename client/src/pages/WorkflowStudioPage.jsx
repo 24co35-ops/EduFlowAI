@@ -359,7 +359,7 @@ function WorkflowStudioContent() {
   const selectedNode = nodes.find((n) => n.id === selectedNodeId);
 
   return (
-    <div className="flex flex-col h-full w-full overflow-hidden bg-slate-950 relative select-none">
+    <div className="flex flex-col h-full w-full overflow-hidden bg-[#EFE9DD] relative select-none font-typewriter text-[#141C2B]">
       
       {/* Top Canvas Toolbar */}
       <CanvasToolbar
@@ -389,7 +389,7 @@ function WorkflowStudioContent() {
           onDrop={onDrop} 
           onDragOver={onDragOver}
           style={{
-            background: 'radial-gradient(circle at 50% 30%, rgba(99, 102, 241, 0.07) 0%, rgba(2, 6, 23, 1) 85%)'
+            backgroundColor: '#EFE9DD'
           }}
         >
           <ReactFlow
@@ -413,41 +413,41 @@ function WorkflowStudioContent() {
               variant={BackgroundVariant.Dots}
               gap={24}
               size={1.5}
-              color="#334155"
+              color="rgba(20, 28, 43, 0.2)"
             />
-            <Controls className="!bg-slate-900/90 !backdrop-blur-xl !border-slate-800 !rounded-2xl !shadow-2xl [&>button]:!bg-transparent [&>button]:!border-slate-800/80 [&>button]:!text-slate-300 hover:[&>button]:!bg-slate-800 [&>button]:!rounded-lg !p-1" />
+            <Controls className="!bg-[#E5DED0] !border-[#141C2B]/20 !rounded-none !shadow-sm [&>button]:!bg-transparent [&>button]:!border-[#141C2B]/15 [&>button]:!text-[#141C2B] hover:[&>button]:!bg-[#EFE9DD] [&>button]:!rounded-none !p-1" />
             <MiniMap
               nodeColor={(node) => {
                 switch (node.data?.status) {
-                  case 'running': return '#06b6d4';
-                  case 'completed': return '#10b981';
-                  case 'error': return '#ef4444';
-                  default: return '#818cf8';
+                  case 'running': return '#2C4A8F';
+                  case 'completed': return '#15803d';
+                  case 'error': return '#be123c';
+                  default: return '#141C2B';
                 }
               }}
-              maskColor="rgba(2, 6, 23, 0.82)"
-              className="!bg-slate-950/90 !backdrop-blur-xl !border-slate-800 !rounded-2xl overflow-hidden !shadow-2xl !m-4"
+              maskColor="rgba(239, 233, 221, 0.85)"
+              className="!bg-[#E5DED0] !border-[#141C2B]/20 !rounded-none overflow-hidden !shadow-sm !m-4"
             />
           </ReactFlow>
 
           {/* Floating Empty Canvas CTA */}
           {nodes.length === 0 && (
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
-              <div className="p-8 rounded-3xl glass-card border border-slate-800 text-center max-w-sm pointer-events-auto space-y-4 shadow-2xl backdrop-blur-2xl animate-in zoom-in-95 duration-200">
-                <div className="w-12 h-12 rounded-2xl bg-purple-600/20 border border-purple-500/30 flex items-center justify-center mx-auto text-purple-400">
-                  <Sparkles className="w-6 h-6 animate-pulse" />
+              <div className="p-8 stationery-card border border-[#141C2B]/20 bg-[#E5DED0] text-center max-w-sm pointer-events-auto space-y-4 shadow-sm animate-in zoom-in-95 duration-200">
+                <div className="w-12 h-12 border border-[#2C4A8F]/30 bg-[#2C4A8F]/10 flex items-center justify-center mx-auto text-[#2C4A8F]">
+                  <Sparkles className="w-6 h-6" />
                 </div>
                 <div className="space-y-1">
-                  <h3 className="text-sm font-bold text-white font-outfit">Canvas is Ready</h3>
-                  <p className="text-xs text-slate-400 leading-relaxed">
+                  <h3 className="text-base font-serif font-bold text-[#141C2B]">Canvas is Ready</h3>
+                  <p className="text-xs font-mono text-[#141C2B]/70 leading-relaxed">
                     Drag AI agents from the left palette or load a curated workflow blueprint.
                   </p>
                 </div>
                 <button
                   onClick={() => handleLoadTemplate(defaultTemplate)}
-                  className="px-5 py-2.5 rounded-xl text-xs font-bold bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white shadow-lg shadow-purple-600/30 transition-all hover:scale-105"
+                  className="btn-filled text-xs font-mono font-bold px-5 py-2.5"
                 >
-                  Load Starter Pipeline
+                  [ Load Starter Pipeline ]
                 </button>
               </div>
             </div>

@@ -27,4 +27,6 @@ Thumbs.db
 
 # Agent & IDE artifacts
 .bob/
+.claude/
+agent/
 

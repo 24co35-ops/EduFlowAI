@@ -51,39 +51,34 @@ export default function InspectorDrawer({ selectedNode, onUpdateNode, onDeleteNo
   };
 
   return (
-    <aside className="w-96 bg-slate-950/95 backdrop-blur-2xl border-l border-slate-800 flex flex-col h-full shadow-2xl z-30 select-none animate-in slide-in-from-right-4 duration-200">
+    <aside className="w-96 bg-[#E5DED0] border-l border-[#141C2B]/15 flex flex-col h-full shadow-sm z-30 select-none animate-in slide-in-from-right-4 duration-200 font-typewriter">
       {/* Drawer Header */}
-      <div className="p-4 border-b border-slate-800 flex items-center justify-between bg-slate-900/40">
+      <div className="p-4 border-b border-[#141C2B]/10 flex items-center justify-between bg-[#EFE9DD]">
         <div className="flex items-center gap-3">
           <div 
-            className="w-8 h-8 rounded-xl flex items-center justify-center border shadow-inner"
-            style={{ 
-              backgroundColor: `${agentDef.accentColor}20`,
-              borderColor: `${agentDef.accentColor}40`,
-              color: agentDef.accentColor 
-            }}
+            className="w-8 h-8 flex items-center justify-center border border-[#141C2B]/20 bg-[#E5DED0] text-[#2C4A8F]"
           >
             <Sparkles className="w-4 h-4" />
           </div>
           <div>
-            <h3 className="text-sm font-bold text-white font-outfit">
+            <h3 className="text-sm font-serif font-bold text-[#141C2B]">
               {nodeData.label || agentDef.label}
             </h3>
-            <p className="text-[10px] text-slate-400 font-mono">Node ID: {selectedNode.id}</p>
+            <p className="text-[10px] text-[#141C2B]/60 font-mono">Node ID: {selectedNode.id}</p>
           </div>
         </div>
 
         <div className="flex items-center gap-1">
           <button
             onClick={() => onDeleteNode(selectedNode.id)}
-            className="p-1.5 text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition-colors"
+            className="p-1.5 text-[#141C2B]/60 hover:text-rose-700 hover:bg-rose-500/10 transition-colors"
             title="Delete Node"
           >
             <Trash2 className="w-4 h-4" />
           </button>
           <button
             onClick={onClose}
-            className="p-1.5 text-slate-400 hover:text-white hover:bg-slate-900 rounded-lg transition-colors"
+            className="p-1.5 text-[#141C2B]/60 hover:text-[#141C2B] hover:bg-[#EFE9DD] transition-colors"
             title="Close Inspector"
           >
             <X className="w-4 h-4" />
@@ -92,7 +87,7 @@ export default function InspectorDrawer({ selectedNode, onUpdateNode, onDeleteNo
       </div>
 
       {/* Tab Navigation */}
-      <div className="flex border-b border-slate-800/80 bg-slate-950 px-3">
+      <div className="flex border-b border-[#141C2B]/10 bg-[#E5DED0] px-3">
         {[
           { id: 'config', label: 'Config', icon: Settings },
           { id: 'inputs', label: 'Inputs', icon: ArrowDownLeft },
@@ -105,10 +100,10 @@ export default function InspectorDrawer({ selectedNode, onUpdateNode, onDeleteNo
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`flex-1 py-2.5 flex items-center justify-center gap-1.5 text-xs font-semibold border-b-2 transition-all ${
+              className={`flex-1 py-2.5 flex items-center justify-center gap-1.5 text-xs font-mono font-bold border-b-2 transition-all ${
                 isActive
-                  ? 'border-purple-500 text-white bg-purple-500/10'
-                  : 'border-transparent text-slate-400 hover:text-slate-200 hover:bg-slate-900/50'
+                  ? 'border-[#141C2B] text-[#141C2B] bg-[#EFE9DD]'
+                  : 'border-transparent text-[#141C2B]/60 hover:text-[#141C2B] hover:bg-[#EFE9DD]/50'
               }`}
             >
               <Icon className="w-3.5 h-3.5" />
@@ -127,14 +122,14 @@ export default function InspectorDrawer({ selectedNode, onUpdateNode, onDeleteNo
             
             {/* Model Selector */}
             <div className="space-y-1.5">
-              <label className="text-[11px] font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
-                <Cpu className="w-3.5 h-3.5 text-indigo-400" />
+              <label className="mono-label text-[11px] flex items-center gap-1.5">
+                <Cpu className="w-3.5 h-3.5 text-[#2C4A8F]" />
                 Inference Engine
               </label>
               <select
                 value={selectedModel}
                 onChange={(e) => handleModelChange(e.target.value)}
-                className="w-full px-3 py-2 text-xs bg-slate-900 border border-slate-800 rounded-xl text-slate-200 focus:outline-none focus:border-purple-500 font-sans"
+                className="w-full px-3 py-2 text-xs bg-[#EFE9DD] border border-[#141C2B]/20 text-[#141C2B] focus:outline-none focus:border-[#2C4A8F] font-mono"
               >
                 {agentDef.models.map((m) => (
                   <option key={m} value={m}>
@@ -142,19 +137,19 @@ export default function InspectorDrawer({ selectedNode, onUpdateNode, onDeleteNo
                   </option>
                 ))}
               </select>
-              <p className="text-[10px] text-slate-500">
-                Optimized for deterministic academic workflows & high grounding.
+              <p className="text-[10px] font-mono text-[#141C2B]/60">
+                Optimized for deterministic academic workflows &amp; high grounding.
               </p>
             </div>
 
             {/* Temperature Slider */}
             <div className="space-y-1.5">
               <div className="flex items-center justify-between">
-                <label className="text-[11px] font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
-                  <Sliders className="w-3.5 h-3.5 text-purple-400" />
+                <label className="mono-label text-[11px] flex items-center gap-1.5">
+                  <Sliders className="w-3.5 h-3.5 text-[#2C4A8F]" />
                   Creativity / Temperature
                 </label>
-                <span className="text-xs font-mono text-purple-400 font-semibold">{temperature}</span>
+                <span className="text-xs font-mono text-[#2C4A8F] font-bold">{temperature}</span>
               </div>
               <input
                 type="range"
@@ -163,9 +158,9 @@ export default function InspectorDrawer({ selectedNode, onUpdateNode, onDeleteNo
                 step="0.05"
                 value={temperature}
                 onChange={(e) => handleTemperatureChange(e.target.value)}
-                className="w-full accent-purple-500 cursor-pointer"
+                className="w-full accent-[#2C4A8F] cursor-pointer"
               />
-              <div className="flex justify-between text-[9px] text-slate-500 font-mono">
+              <div className="flex justify-between text-[9px] text-[#141C2B]/60 font-mono">
                 <span>Exact / Deterministic (0.0)</span>
                 <span>Exploratory (1.0)</span>
               </div>
@@ -173,20 +168,20 @@ export default function InspectorDrawer({ selectedNode, onUpdateNode, onDeleteNo
 
             {/* Agent-specific dynamic fields */}
             {agentDef.configFields && agentDef.configFields.length > 0 && (
-              <div className="pt-2 border-t border-slate-800 space-y-3">
-                <h4 className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+              <div className="pt-2 border-t border-[#141C2B]/10 space-y-3">
+                <h4 className="mono-label text-[11px]">
                   Agent Parameters
                 </h4>
                 {agentDef.configFields.map((field) => (
                   <div key={field.key} className="space-y-1">
-                    <label className="text-xs font-medium text-slate-300">
+                    <label className="mono-label text-[11px]">
                       {field.label}
                     </label>
                     {field.type === 'select' ? (
                       <select
                         value={nodeData[field.key] || field.default}
                         onChange={(e) => handleCustomFieldChange(field.key, e.target.value)}
-                        className="w-full px-3 py-1.5 text-xs bg-slate-900 border border-slate-800 rounded-lg text-slate-200 focus:outline-none focus:border-purple-500"
+                        className="w-full px-3 py-1.5 text-xs bg-[#EFE9DD] border border-[#141C2B]/20 text-[#141C2B] focus:outline-none focus:border-[#2C4A8F] font-mono"
                       >
                         {field.options.map((opt) => (
                           <option key={opt} value={opt}>
@@ -199,17 +194,17 @@ export default function InspectorDrawer({ selectedNode, onUpdateNode, onDeleteNo
                         type="number"
                         value={nodeData[field.key] ?? field.default}
                         onChange={(e) => handleCustomFieldChange(field.key, Number(e.target.value))}
-                        className="w-full px-3 py-1.5 text-xs bg-slate-900 border border-slate-800 rounded-lg text-slate-200 focus:outline-none focus:border-purple-500"
+                        className="w-full px-3 py-1.5 text-xs bg-[#EFE9DD] border border-[#141C2B]/20 text-[#141C2B] focus:outline-none focus:border-[#2C4A8F] font-mono"
                       />
                     ) : field.type === 'boolean' ? (
-                      <div className="flex items-center gap-2 pt-1">
+                      <div className="flex items-center gap-2 pt-1 font-mono">
                         <input
                           type="checkbox"
                           checked={nodeData[field.key] ?? field.default}
                           onChange={(e) => handleCustomFieldChange(field.key, e.target.checked)}
-                          className="w-4 h-4 accent-purple-500 rounded cursor-pointer"
+                          className="w-4 h-4 accent-[#2C4A8F] cursor-pointer"
                         />
-                        <span className="text-xs text-slate-400">Enabled</span>
+                        <span className="text-xs text-[#141C2B]/70">Enabled</span>
                       </div>
                     ) : null}
                   </div>
@@ -218,14 +213,14 @@ export default function InspectorDrawer({ selectedNode, onUpdateNode, onDeleteNo
             )}
 
             {/* Custom System Instruction Override */}
-            <div className="pt-2 border-t border-slate-800 space-y-1.5">
-              <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+            <div className="pt-2 border-t border-[#141C2B]/10 space-y-1.5">
+              <label className="mono-label text-[11px]">
                 System Instructions (Optional)
               </label>
               <textarea
                 rows={3}
                 placeholder="Custom prompt engineering instructions for this specific node..."
-                className="w-full p-2.5 text-xs bg-slate-900 border border-slate-800 rounded-xl text-slate-200 placeholder-slate-600 focus:outline-none focus:border-purple-500 font-mono leading-relaxed"
+                className="w-full p-2.5 text-xs bg-[#EFE9DD] border border-[#141C2B]/20 text-[#141C2B] placeholder-[#141C2B]/40 focus:outline-none focus:border-[#2C4A8F] font-mono leading-relaxed"
                 defaultValue={nodeData.systemPrompt || ''}
                 onChange={(e) => handleCustomFieldChange('systemPrompt', e.target.value)}
               />
@@ -236,17 +231,17 @@ export default function InspectorDrawer({ selectedNode, onUpdateNode, onDeleteNo
 
         {/* Tab 2: Inputs Preview */}
         {activeTab === 'inputs' && (
-          <div className="space-y-4">
-            <div className="p-3 rounded-xl bg-slate-900/60 border border-slate-800 space-y-2">
-              <div className="flex items-center justify-between text-xs font-semibold text-slate-200">
+          <div className="space-y-4 font-mono">
+            <div className="p-3 bg-[#EFE9DD] border border-[#141C2B]/15 space-y-2">
+              <div className="flex items-center justify-between text-xs font-bold text-[#141C2B]">
                 <span>Input Ports ({agentDef.inputs.length})</span>
-                <span className="text-[10px] text-cyan-400 font-mono">Resolved</span>
+                <span className="text-[10px] text-[#2C4A8F]">Resolved</span>
               </div>
               <div className="space-y-2">
                 {agentDef.inputs.map((inp) => (
-                  <div key={inp.id} className="p-2 rounded-lg bg-slate-950 border border-slate-800 text-xs flex items-center justify-between">
-                    <span className="font-medium text-slate-300">{inp.name}</span>
-                    <span className="text-[10px] font-mono text-cyan-400 bg-cyan-950/80 px-2 py-0.5 rounded border border-cyan-500/20">
+                  <div key={inp.id} className="p-2 bg-[#E5DED0] border border-[#141C2B]/15 text-xs flex items-center justify-between">
+                    <span className="text-[#141C2B]">{inp.name}</span>
+                    <span className="text-[10px] text-[#2C4A8F] bg-[#EFE9DD] px-2 py-0.5 border border-[#2C4A8F]/30 font-bold">
                       {inp.type}
                     </span>
                   </div>
@@ -255,8 +250,8 @@ export default function InspectorDrawer({ selectedNode, onUpdateNode, onDeleteNo
             </div>
 
             <div className="space-y-1">
-              <label className="text-xs font-semibold text-slate-400">Sample Ingest Payload</label>
-              <pre className="p-3 rounded-xl bg-slate-950 border border-slate-800 text-[11px] font-mono text-slate-300 overflow-x-auto">
+              <label className="mono-label text-[11px]">Sample Ingest Payload</label>
+              <pre className="p-3 bg-[#EFE9DD] border border-[#141C2B]/15 text-[11px] font-mono text-[#141C2B] overflow-x-auto">
 {JSON.stringify({
   source: 'Previous Node Output',
   format: 'markdown',
@@ -272,23 +267,23 @@ export default function InspectorDrawer({ selectedNode, onUpdateNode, onDeleteNo
         {activeTab === 'outputs' && (
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-slate-300">Live Synthesis Output</span>
+              <span className="mono-label text-[11px]">Live Synthesis Output</span>
               <button
                 onClick={handleCopy}
-                className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-purple-600/20 text-purple-300 hover:bg-purple-600/30 text-xs font-semibold transition-colors border border-purple-500/30"
+                className="btn-outline text-xs flex items-center gap-1.5 py-1 px-2.5"
               >
-                {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
-                <span>{copied ? 'Copied!' : 'Copy Output'}</span>
+                {copied ? <Check className="w-3.5 h-3.5 text-emerald-700" /> : <Copy className="w-3.5 h-3.5 text-[#2C4A8F]" />}
+                <span>{copied ? '[ Copied! ]' : '[ Copy Output ]'}</span>
               </button>
             </div>
 
-            <div className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 text-xs text-slate-200 leading-relaxed font-sans whitespace-pre-line max-h-72 overflow-y-auto custom-scrollbar">
+            <div className="p-3.5 bg-[#EFE9DD] border border-[#141C2B]/15 text-xs text-[#141C2B] leading-relaxed font-mono whitespace-pre-line max-h-72 overflow-y-auto custom-scrollbar">
               {previewOutput}
             </div>
 
             <div className="space-y-1">
-              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-                Output Format: Structured JSON / Markdown
+              <span className="mono-label text-[10px]">
+                Output Format: Structured JSON / Plain Text
               </span>
             </div>
           </div>
@@ -296,36 +291,36 @@ export default function InspectorDrawer({ selectedNode, onUpdateNode, onDeleteNo
 
         {/* Tab 4: Telemetry */}
         {activeTab === 'telemetry' && (
-          <div className="space-y-4">
+          <div className="space-y-4 font-mono">
             <div className="grid grid-cols-2 gap-2">
-              <div className="p-3 rounded-xl bg-slate-900 border border-slate-800">
-                <span className="text-[10px] text-slate-500 font-mono">Inference Latency</span>
-                <p className="text-lg font-bold text-white font-mono mt-0.5">84 ms</p>
+              <div className="p-3 bg-[#EFE9DD] border border-[#141C2B]/15">
+                <span className="mono-label text-[10px]">Inference Latency</span>
+                <p className="text-lg font-bold text-[#141C2B] mt-0.5">84 ms</p>
               </div>
-              <div className="p-3 rounded-xl bg-slate-900 border border-slate-800">
-                <span className="text-[10px] text-slate-500 font-mono">Token Count</span>
-                <p className="text-lg font-bold text-purple-400 font-mono mt-0.5">342 tok</p>
-              </div>
-            </div>
-
-            <div className="p-3.5 rounded-xl bg-slate-900/60 border border-slate-800 space-y-2 text-xs">
-              <div className="flex items-center justify-between">
-                <span className="text-slate-400">Grounding Confidence:</span>
-                <span className="font-semibold text-emerald-400">99.2%</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-slate-400">Deterministic Match:</span>
-                <span className="font-semibold text-indigo-400">Strict Lock</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-slate-400">Fallback Provider:</span>
-                <span className="font-semibold text-slate-400">None (Primary Live)</span>
+              <div className="p-3 bg-[#EFE9DD] border border-[#141C2B]/15">
+                <span className="mono-label text-[10px]">Token Count</span>
+                <p className="text-lg font-bold text-[#2C4A8F] mt-0.5">342 tok</p>
               </div>
             </div>
 
-            <div className="p-3 rounded-xl bg-indigo-950/30 border border-indigo-500/20 text-[11px] text-indigo-300 flex items-start gap-2">
-              <ShieldCheck className="w-4 h-4 text-indigo-400 flex-shrink-0 mt-0.5" />
-              <span>Full compliance with AGENTS.md guardrails: truthful provenance & zero hallucinated claims.</span>
+            <div className="p-3.5 bg-[#EFE9DD] border border-[#141C2B]/15 space-y-2 text-xs">
+              <div className="flex items-center justify-between">
+                <span className="text-[#141C2B]/70">Grounding Confidence:</span>
+                <span className="font-bold text-emerald-800">99.2%</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-[#141C2B]/70">Deterministic Match:</span>
+                <span className="font-bold text-[#2C4A8F]">Strict Lock</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-[#141C2B]/70">Fallback Provider:</span>
+                <span className="font-bold text-[#141C2B]/60">None (Primary Live)</span>
+              </div>
+            </div>
+
+            <div className="p-3 bg-[#2C4A8F]/10 border border-[#2C4A8F]/30 text-[11px] text-[#2C4A8F] flex items-start gap-2">
+              <ShieldCheck className="w-4 h-4 text-[#2C4A8F] flex-shrink-0 mt-0.5" />
+              <span>Full compliance with AGENTS.md guardrails: truthful provenance &amp; zero hallucinated claims.</span>
             </div>
           </div>
         )}

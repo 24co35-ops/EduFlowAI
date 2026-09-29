@@ -41,7 +41,7 @@ function AppContent({ user, setUser }) {
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-indigo-500 selection:text-white">
+    <div className="min-h-screen bg-[#EFE9DD] text-[#141C2B] flex flex-col font-typewriter stationery-app selection:bg-[#2C4A8F]/20 selection:text-[#141C2B]">
       {/* Navigation Header */}
       <Navbar user={user} setUser={setUser} />
 
@@ -191,7 +191,7 @@ function AppContent({ user, setUser }) {
         </main>
 
         {/* Footer */}
-        <footer className="border-t border-slate-900 py-6 text-center text-xs text-slate-500 glass-card">
+        <footer className="border-t border-[rgba(20,28,43,0.16)] bg-[#E5DED0] py-6 text-center text-xs text-[#767E8C] mono-label">
           <p>EduFlow AI © 2026 — IBM Hackathon Project powered by IBM watsonx.ai (Granite 13B & 20B)</p>
         </footer>
       </>

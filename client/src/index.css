@@ -4,215 +4,244 @@
 
 @layer base {
   :root {
-    --color-brand-primary: #6366f1;
-    --color-brand-secondary: #3b82f6;
-    --color-brand-accent: #a855f7;
+    --bg-ground: #EFE9DD;
+    --bg-ground-sec: #E5DED0;
+    --ink-primary: #141C2B;
+    --ink-sec: #4A5364;
+    --ink-muted: #767E8C;
+    --ink-blue: #2C4A8F;
+    --hairline: rgba(20, 28, 43, 0.16);
+
+    --color-brand-primary: #2C4A8F;
+    --color-brand-secondary: #141C2B;
+    --color-brand-accent: #2C4A8F;
   }
 
   body {
-    @apply bg-slate-950 text-slate-100 font-sans antialiased selection:bg-indigo-500/30 selection:text-indigo-200;
+    background-color: var(--bg-ground);
+    color: var(--ink-primary);
+    font-family: 'Courier Prime', Courier, monospace;
+    letter-spacing: 0.04em;
+    line-height: 1.85;
+    -webkit-font-smoothing: antialiased;
+    selection-background-color: rgba(44, 74, 143, 0.2);
+    selection-color: #141C2B;
+  }
+
+  /* Universal zero border-radius rule for technical stationery */
+  .stationery-app * {
+    border-radius: 0 !important;
   }
 }
 
-/* Glassmorphism primitives */
-.glass-card {
-  background: rgba(15, 23, 42, 0.7);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.07);
+/* ==========================================================================
+   Stationery & Archival Ledger Primitives
+   Spec: Warm paper ground (#EFE9DD), ledger surface (#E5DED0), ink (#141C2B),
+   ink blue (#2C4A8F), Newsreader serif + Courier Prime typewriter, radius 0.
+   ========================================================================== */
+
+/* Archival Cards (graceful replacement for glass-card) */
+.glass-card,
+.stationery-card {
+  background-color: #E5DED0;
+  border: 1px solid rgba(20, 28, 43, 0.16);
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  color: #141C2B;
 }
 
-.glass-card-subtle {
-  background: rgba(15, 23, 42, 0.45);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+.glass-card-subtle,
+.stationery-card-subtle {
+  background-color: #EFE9DD;
+  border: 1px solid rgba(20, 28, 43, 0.12);
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  color: #141C2B;
 }
 
-.glass-card-hover {
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+.glass-card-hover,
+.stationery-card-hover {
+  transition: border-color 0.2s ease, background-color 0.2s ease;
 }
 
-.glass-card-hover:hover {
-  transform: translateY(-2px);
-  border-color: rgba(99, 102, 241, 0.35);
-  box-shadow: 0 12px 32px -8px rgba(99, 102, 241, 0.22);
+.glass-card-hover:hover,
+.stationery-card-hover:hover {
+  border-color: #141C2B;
 }
 
-/* Gradients & Text */
+/* Typography Helpers */
+.serif-display {
+  font-family: 'Newsreader', Georgia, serif;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+  color: #141C2B;
+}
+
+.serif-italic {
+  font-family: 'Newsreader', Georgia, serif;
+  font-style: italic;
+  color: #2C4A8F;
+}
+
+.mono-label {
+  font-family: 'Courier Prime', Courier, monospace;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* Hairline Ledger Rows */
+.hairline-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.85rem 0;
+  border-bottom: 1px solid rgba(20, 28, 43, 0.16);
+}
+
+.hairline-row:last-child {
+  border-bottom: none;
+}
+
+/* Precision Hairlines */
+.stationery-hairline-b {
+  border-bottom: 1px solid rgba(20, 28, 43, 0.16);
+}
+.stationery-hairline-t {
+  border-top: 1px solid rgba(20, 28, 43, 0.16);
+}
+.stationery-hairline-r {
+  border-right: 1px solid rgba(20, 28, 43, 0.16);
+}
+.stationery-hairline-l {
+  border-left: 1px solid rgba(20, 28, 43, 0.16);
+}
+.stationery-hairline-all {
+  border: 1px solid rgba(20, 28, 43, 0.16);
+}
+
+/* Interactive Stationery Buttons */
+.btn-filled,
+.btn-stationery-filled {
+  background-color: #141C2B;
+  color: #EFE9DD;
+  font-family: 'Courier Prime', Courier, monospace;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 0.6rem 1.1rem;
+  border: 1px solid #141C2B;
+  border-radius: 0 !important;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: all 0.2s ease;
+}
+
+.btn-filled:hover,
+.btn-stationery-filled:hover {
+  background-color: #2C4A8F;
+  border-color: #2C4A8F;
+  color: #EFE9DD;
+}
+
+.btn-outline,
+.btn-stationery-outline {
+  background-color: transparent;
+  color: #141C2B;
+  font-family: 'Courier Prime', Courier, monospace;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 0.6rem 1.1rem;
+  border: 1px solid rgba(20, 28, 43, 0.24);
+  border-radius: 0 !important;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: all 0.2s ease;
+}
+
+.btn-outline:hover,
+.btn-stationery-outline:hover {
+  background-color: #E5DED0;
+  border-color: #141C2B;
+}
+
+/* Status Tags */
+.tag-proficient {
+  font-family: 'Courier Prime', monospace;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  padding: 0.2rem 0.5rem;
+  border: 1px solid rgba(44, 74, 143, 0.3);
+  background-color: rgba(44, 74, 143, 0.08);
+  color: #2C4A8F;
+  border-radius: 0 !important;
+}
+
+.tag-risk {
+  font-family: 'Courier Prime', monospace;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  padding: 0.2rem 0.5rem;
+  border: 1px solid rgba(20, 28, 43, 0.3);
+  background-color: rgba(20, 28, 43, 0.08);
+  color: #141C2B;
+  border-radius: 0 !important;
+}
+
+/* Progress Ledger Bars */
+.ledger-bar-bg {
+  width: 100%;
+  height: 6px;
+  background-color: rgba(20, 28, 43, 0.12);
+  border-radius: 0 !important;
+  overflow: hidden;
+}
+
+.ledger-bar-fill {
+  height: 100%;
+  background-color: #2C4A8F;
+  border-radius: 0 !important;
+  transition: width 0.8s ease-out;
+}
+
+.ledger-bar-fill.risk {
+  background-color: #141C2B;
+}
+
+/* Wordmark & Headings */
 .gradient-text {
-  @apply bg-clip-text text-transparent bg-gradient-to-r from-blue-400 via-indigo-300 to-purple-400;
+  font-family: 'Newsreader', Georgia, serif;
+  font-style: italic;
+  color: #2C4A8F;
 }
 
-.gradient-text-amber {
-  @apply bg-clip-text text-transparent bg-gradient-to-r from-amber-400 via-orange-300 to-rose-400;
-}
-
-.gradient-text-emerald {
-  @apply bg-clip-text text-transparent bg-gradient-to-r from-emerald-400 via-teal-300 to-cyan-400;
-}
-
-.gradient-border-glow {
-  position: relative;
-}
-
-.gradient-border-glow::before {
-  content: '';
-  position: absolute;
-  inset: -1px;
-  border-radius: inherit;
-  padding: 1px;
-  background: linear-gradient(135deg, rgba(59, 130, 246, 0.4), rgba(99, 102, 241, 0.4), rgba(168, 85, 247, 0.4));
-  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-  -webkit-mask-composite: xor;
-  mask-composite: exclude;
-  pointer-events: none;
-}
-
-/* Custom flip card 3D effect */
-.perspective-1000 {
-  perspective: 1000px;
-}
-.transform-style-3d {
-  transform-style: preserve-3d;
-}
-.backface-hidden {
-  backface-visibility: hidden;
-}
-.rotate-y-180 {
-  transform: rotateY(180deg);
-}
-
-/* Custom Scrollbar */
+/* Custom Scrollbar for Stationery Paper */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
 
 ::-webkit-scrollbar-track {
-  background: rgba(15, 23, 42, 0.6);
+  background: #EFE9DD;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(71, 85, 105, 0.6);
-  border-radius: 9999px;
+  background: rgba(20, 28, 43, 0.2);
+  border-radius: 0;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(99, 102, 241, 0.7);
-}
-
-/* Pulse badge animations */
-@keyframes subtle-glow {
-  0%, 100% {
-    box-shadow: 0 0 15px rgba(99, 102, 241, 0.2);
-  }
-  50% {
-    box-shadow: 0 0 25px rgba(99, 102, 241, 0.4);
-  }
-}
-
-.animate-subtle-glow {
-  animation: subtle-glow 3s infinite ease-in-out;
-}
-
-/* AI Execution Pulse Glow */
-@keyframes node-exec-glow {
-  0%, 100% {
-    box-shadow: 0 0 20px -2px rgba(6, 182, 212, 0.4), 0 0 10px rgba(168, 85, 247, 0.3);
-  }
-  50% {
-    box-shadow: 0 0 40px 2px rgba(6, 182, 212, 0.7), 0 0 20px rgba(168, 85, 247, 0.5);
-  }
-}
-
-.animate-node-exec {
-  animation: node-exec-glow 1.8s infinite ease-in-out;
-}
-
-/* Traveling Data Pulse animation for canvas */
-@keyframes flow-dash {
-  to {
-    stroke-dashoffset: -24;
-  }
-}
-
-.animate-flow-dash {
-  stroke-dasharray: 6, 6;
-  animation: flow-dash 1s linear infinite;
-}
-
-/* Custom Canvas Port Handle Glow */
-.react-flow__handle {
-  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s ease !important;
-}
-
-.react-flow__handle:hover {
-  transform: scale(1.4) !important;
-  box-shadow: 0 0 12px currentColor !important;
-}
-
-/* React Flow Background styling */
-.react-flow__pane {
-  cursor: grab;
-}
-.react-flow__pane:active {
-  cursor: grabbing;
-}
-
-/* ==========================================================================
-   Stationery Maker's Landing Page Styles & Motion Models
-   Spec: Warm paper ground (#EFE9DD), ink (#141C2B), ink blue (#2C4A8F),
-   Newsreader serif + Courier Prime typewriter, 0 border radius everywhere.
-   ========================================================================== */
-
-.stationery-page {
-  --bg-ground: #EFE9DD;
-  --bg-ground-sec: #E5DED0;
-  --ink-primary: #141C2B;
-  --ink-sec: #4A5364;
-  --ink-muted: #767E8C;
-  --ink-blue: #2C4A8F;
-  --hairline: rgba(20, 28, 43, 0.16);
-
-  background-color: var(--bg-ground);
-  color: var(--ink-primary);
-  font-family: 'Courier Prime', Courier, monospace;
-  letter-spacing: 0.07em;
-  line-height: 1.9;
-}
-
-.stationery-page * {
-  border-radius: 0 !important;
-}
-
-.font-newsreader {
-  font-family: 'Newsreader', Georgia, serif;
-  letter-spacing: -0.02em;
-}
-
-.font-typewriter {
-  font-family: 'Courier Prime', Courier, monospace;
-}
-
-.stationery-hairline-b {
-  border-bottom: 1px solid rgba(20, 28, 43, 0.16);
-}
-
-.stationery-hairline-t {
-  border-top: 1px solid rgba(20, 28, 43, 0.16);
-}
-
-.stationery-hairline-r {
-  border-right: 1px solid rgba(20, 28, 43, 0.16);
-}
-
-.stationery-hairline-l {
-  border-left: 1px solid rgba(20, 28, 43, 0.16);
-}
-
-.stationery-hairline-all {
-  border: 1px solid rgba(20, 28, 43, 0.16);
+  background: #2C4A8F;
 }
 
 /* Reduced motion accessibility */
@@ -221,4 +250,3 @@
     display: none !important;
   }
 }
-

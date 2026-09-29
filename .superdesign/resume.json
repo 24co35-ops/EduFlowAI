@@ -1,0 +1,59 @@
+{
+  "schemaVersion": 1,
+  "targets": {
+    "/": {
+      "targetKind": "existing-ui",
+      "projectId": "0f71a975-79f7-4481-b80c-73fa376c1872",
+      "activeDraftId": "bc00ded9-b092-4158-91e4-b2b24ce741a5",
+      "designSystemPath": ".superdesign/design-system.md",
+      "contextFiles": [
+        ".superdesign/design-system.md",
+        "client/tailwind.config.js",
+        "client/src/index.css:1:120",
+        "client/src/pages/MakerLandingPage.jsx:1:350"
+      ],
+      "fingerprints": {
+        ".superdesign/design-system.md": "89c0f9d553e67096b512c231dedbcf9def5cdd0a41edd66af1febc9647cae319",
+        "client/tailwind.config.js": "54009fa1853107c8f178c9897089e4e433594adaf648790bbdcaa36e482f7f1c",
+        "client/src/index.css": "f4d5ccddf81617b977882376d720e4cc65bd4b82138fb5c7059220348df1154d",
+        "client/src/pages/MakerLandingPage.jsx": "5fa05fb7700622181112088cb1f3bec2e9352c9209f95185ca6e0607d7fcdf32"
+      },
+      "drafts": {
+        "bc00ded9-b092-4158-91e4-b2b24ce741a5": {
+          "title": "EduFlow AI — The Calibrated Instrument",
+          "visualDirection": "warm maker stationery",
+          "currentVersion": 1
+        }
+      },
+      "updatedAt": "2026-09-29T05:11:45Z"
+    },
+    "/teacher-dashboard": {
+      "targetKind": "new-target",
+      "sourceTarget": "/",
+      "sourceDraftId": "bc00ded9-b092-4158-91e4-b2b24ce741a5",
+      "projectId": "0f71a975-79f7-4481-b80c-73fa376c1872",
+      "activeDraftId": "62c55ea7-65ba-4b25-b405-2550cdf6ee1b",
+      "designSystemPath": ".superdesign/design-system.md",
+      "contextFiles": [
+        ".superdesign/design-system.md",
+        "client/tailwind.config.js",
+        "client/src/index.css:1:120",
+        "client/src/pages/TeacherDashboard.jsx:1:160"
+      ],
+      "fingerprints": {
+        ".superdesign/design-system.md": "89c0f9d553e67096b512c231dedbcf9def5cdd0a41edd66af1febc9647cae319",
+        "client/tailwind.config.js": "54009fa1853107c8f178c9897089e4e433594adaf648790bbdcaa36e482f7f1c",
+        "client/src/index.css": "f4d5ccddf81617b977882376d720e4cc65bd4b82138fb5c7059220348df1154d",
+        "client/src/pages/MakerLandingPage.jsx": "5fa05fb7700622181112088cb1f3bec2e9352c9209f95185ca6e0607d7fcdf32"
+      },
+      "drafts": {
+        "62c55ea7-65ba-4b25-b405-2550cdf6ee1b": {
+          "title": "Teacher Operations & Class Mastery Ledger",
+          "visualDirection": "warm maker stationery",
+          "currentVersion": 1
+        }
+      },
+      "updatedAt": "2026-09-29T05:16:33.815Z"
+    }
+  }
+}

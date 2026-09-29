@@ -9,7 +9,8 @@ import {
   Zap,
   Lightbulb,
   HelpCircle,
-  ListChecks
+  ListChecks,
+  ShieldCheck
 } from 'lucide-react';
 import API from '../services/api';
 import AIEvidenceBadge from '../components/AIEvidenceBadge';
@@ -21,7 +22,7 @@ export default function DoubtSolverPage({ user }) {
     {
       id: 'msg-init-1',
       sender: 'bob',
-      text: `Hello ${displayName}! 👋 I am your EduFlow AI Tutor powered by IBM BOB (watsonx.ai Granite Chat). \n\nAsk me any doubt from your syllabus, and I'll explain it step-by-step!`,
+      text: `Hello ${displayName}! 👋 I am your EduFlow AI Tutor powered by IBM BOB (watsonx.ai Granite Chat). \n\nAsk me any doubt from your syllabus, and I will construct a calibrated, step-by-step explanation grounded in course textbook chapters!`,
       timestamp: new Date()
     }
   ]);
@@ -93,24 +94,30 @@ export default function DoubtSolverPage({ user }) {
     <div className="space-y-6 max-w-5xl mx-auto">
       
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 text-xs font-semibold mb-2">
-            <Bot className="w-3.5 h-3.5" /> Feature F4: AI Doubt Solver
+      <div className="bg-[#E5DED0] border border-[rgba(20,28,43,0.16)] p-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="space-y-1">
+            <div className="inline-flex items-center gap-1.5 text-[10px] mono-label text-[#2C4A8F]">
+              <Bot className="w-3.5 h-3.5" /> [ GROUNDED DIALOGUE LEDGER • FEATURE F4 ]
+            </div>
+            <h1 className="serif-display text-3xl font-bold">
+              AI Student Doubt <span className="serif-italic">Solver</span>
+            </h1>
+            <p className="text-xs text-[#4A5364]">
+              Curriculum-aligned live doubt tutor powered by IBM watsonx.ai Granite 13B &amp; 20B with grounded citations.
+            </p>
           </div>
-          <h1 className="text-3xl font-extrabold text-white font-outfit">AI Student Doubt Solver</h1>
-          <p className="text-xs text-slate-400">Curriculum-aligned live doubt tutor powered by IBM watsonx.ai Granite</p>
-        </div>
 
-        {/* Scope Tag */}
-        <div className="flex items-center gap-2 bg-slate-900 px-3 py-2 rounded-xl border border-slate-800 text-xs text-slate-300 self-start sm:self-auto">
-          <BookOpen className="w-4 h-4 text-indigo-400" />
-          <span className="font-medium">{syllabusScope}</span>
+          {/* Scope Tag */}
+          <div className="flex items-center gap-2 bg-[#EFE9DD] px-3 py-2 border border-[rgba(20,28,43,0.2)] text-xs mono-label text-[#141C2B] self-start sm:self-auto">
+            <BookOpen className="w-3.5 h-3.5 text-[#2C4A8F]" />
+            <span>[ {syllabusScope} ]</span>
+          </div>
         </div>
       </div>
 
       {/* Main Chat Container */}
-      <div className="glass-card rounded-3xl border border-slate-800 overflow-hidden flex flex-col h-[650px] shadow-2xl">
+      <div className="bg-[#E5DED0] border border-[rgba(20,28,43,0.16)] flex flex-col h-[650px] text-[#141C2B]">
         
         {/* Chat Messages Feed */}
         <div className="flex-1 p-6 overflow-y-auto space-y-4">
@@ -124,26 +131,26 @@ export default function DoubtSolverPage({ user }) {
               >
                 {/* Avatar */}
                 <div
-                  className={`w-9 h-9 rounded-xl flex items-center justify-center text-xs font-bold flex-shrink-0 shadow-md ${
+                  className={`w-8 h-8 border border-[rgba(20,28,43,0.2)] flex items-center justify-center text-xs mono-label font-bold flex-shrink-0 ${
                     isUser
-                      ? 'bg-emerald-600 text-white'
-                      : 'bg-gradient-to-tr from-blue-600 via-indigo-600 to-purple-600 text-white'
+                      ? 'bg-[#141C2B] text-[#EFE9DD]'
+                      : 'bg-[#EFE9DD] text-[#2C4A8F]'
                   }`}
                 >
-                  {isUser ? <User className="w-4 h-4" /> : <Bot className="w-5 h-5" />}
+                  {isUser ? <User className="w-4 h-4" /> : <Bot className="w-4 h-4" />}
                 </div>
 
                 {/* Message Bubble */}
                 <div
-                  className={`p-4 rounded-2xl text-xs space-y-1.5 border shadow-sm max-w-[80%] ${
+                  className={`p-4 text-xs space-y-2 border max-w-[80%] ${
                     isUser
-                      ? 'bg-emerald-600 text-white border-emerald-500 rounded-tr-none'
-                      : 'bg-slate-900 text-slate-200 border-slate-800 rounded-tl-none'
+                      ? 'bg-[#141C2B] text-[#EFE9DD] border-[#141C2B]'
+                      : 'bg-[#EFE9DD] text-[#141C2B] border-[rgba(20,28,43,0.16)]'
                   }`}
                 >
                   {!isUser && (
-                    <div className="flex items-center gap-1 text-[10px] font-bold text-indigo-400">
-                      <Sparkles className="w-3 h-3" /> IBM BOB Granite Tutor
+                    <div className="flex items-center gap-1.5 mono-label text-[10px] text-[#2C4A8F]">
+                      <Sparkles className="w-3 h-3" /> [ IBM BOB GRANITE TUTOR ]
                     </div>
                   )}
                   <div className="whitespace-pre-wrap leading-relaxed">
@@ -154,7 +161,7 @@ export default function DoubtSolverPage({ user }) {
                       <AIEvidenceBadge metadata={msg._aiMetadata} compact={true} />
                     </div>
                   )}
-                  <div className={`text-[9px] mt-1 ${isUser ? 'text-emerald-200' : 'text-slate-600'}`}>
+                  <div className={`mono-label text-[9px] mt-1 ${isUser ? 'text-[#767E8C]' : 'text-[#767E8C]'}`}>
                     {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                   </div>
                 </div>
@@ -166,17 +173,12 @@ export default function DoubtSolverPage({ user }) {
           {/* Thinking Indicator */}
           {botThinking && (
             <div className="flex items-center gap-3 mr-auto">
-              <div className="w-9 h-9 rounded-xl bg-indigo-600/20 text-indigo-400 flex items-center justify-center border border-indigo-500/30">
-                <Bot className="w-5 h-5 animate-pulse" />
+              <div className="w-8 h-8 border border-[rgba(20,28,43,0.2)] bg-[#EFE9DD] text-[#2C4A8F] flex items-center justify-center">
+                <Bot className="w-4 h-4 animate-pulse" />
               </div>
-              <div className="p-3 rounded-2xl bg-slate-900 border border-slate-800 text-xs text-indigo-300 flex items-center gap-2">
+              <div className="p-3 bg-[#EFE9DD] border border-[rgba(20,28,43,0.16)] text-xs mono-label text-[#2C4A8F] flex items-center gap-2">
                 <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                <span>IBM BOB is synthesizing explanation...</span>
-                <span className="flex gap-0.5">
-                  <span className="w-1 h-1 rounded-full bg-indigo-400 animate-bounce" style={{animationDelay:'0ms'}}/>
-                  <span className="w-1 h-1 rounded-full bg-indigo-400 animate-bounce" style={{animationDelay:'150ms'}}/>
-                  <span className="w-1 h-1 rounded-full bg-indigo-400 animate-bounce" style={{animationDelay:'300ms'}}/>
-                </span>
+                <span>[ IBM BOB SYNTHESIZING GROUNDED CITATION... ]</span>
               </div>
             </div>
           )}
@@ -185,68 +187,66 @@ export default function DoubtSolverPage({ user }) {
         </div>
 
         {/* Dynamic Action Chips (Simplify, Example, Quiz Me) */}
-        <div className="px-6 py-2 bg-slate-950/80 border-t border-slate-800/80 flex items-center gap-2 overflow-x-auto">
-          <span className="text-[10px] font-bold text-indigo-400 uppercase tracking-wider flex-shrink-0">Tutor Actions:</span>
+        <div className="px-6 py-2.5 bg-[#E5DED0] border-t border-[rgba(20,28,43,0.16)] flex items-center gap-2 overflow-x-auto">
+          <span className="mono-label text-[10px] text-[#767E8C] flex-shrink-0">[ TUTOR ACTIONS: ]</span>
           <button
             type="button"
             onClick={() => handleSendMessage(null, 'simplify', lastUserMessage)}
             disabled={botThinking}
-            className="px-3 py-1 rounded-full bg-indigo-950/60 hover:bg-indigo-900/80 border border-indigo-500/30 text-[11px] font-semibold text-indigo-200 flex items-center gap-1 transition-all flex-shrink-0 disabled:opacity-40"
+            className="btn-outline text-[10px] py-1 px-2.5 flex items-center gap-1 flex-shrink-0 disabled:opacity-40"
           >
-            <Zap className="w-3 h-3 text-indigo-400" /> Simplify Concept
+            <Zap className="w-3 h-3 text-[#2C4A8F]" /> [ Simplify Concept ]
           </button>
           <button
             type="button"
             onClick={() => handleSendMessage(null, 'example', lastUserMessage)}
             disabled={botThinking}
-            className="px-3 py-1 rounded-full bg-emerald-950/60 hover:bg-emerald-900/80 border border-emerald-500/30 text-[11px] font-semibold text-emerald-200 flex items-center gap-1 transition-all flex-shrink-0 disabled:opacity-40"
+            className="btn-outline text-[10px] py-1 px-2.5 flex items-center gap-1 flex-shrink-0 disabled:opacity-40"
           >
-            <Lightbulb className="w-3 h-3 text-emerald-400" /> Give Real-World Example
+            <Lightbulb className="w-3 h-3 text-[#2C4A8F]" /> [ Real-World Analogy ]
           </button>
           <button
             type="button"
             onClick={() => handleSendMessage(null, 'quiz_me', lastUserMessage)}
             disabled={botThinking}
-            className="px-3 py-1 rounded-full bg-purple-950/60 hover:bg-purple-900/80 border border-purple-500/30 text-[11px] font-semibold text-purple-200 flex items-center gap-1 transition-all flex-shrink-0 disabled:opacity-40"
+            className="btn-outline text-[10px] py-1 px-2.5 flex items-center gap-1 flex-shrink-0 disabled:opacity-40"
           >
-            <ListChecks className="w-3 h-3 text-purple-400" /> Quiz Me on This
+            <ListChecks className="w-3 h-3 text-[#2C4A8F]" /> [ Quiz Me on This ]
           </button>
         </div>
 
         {/* Suggestion Chips */}
-        <div className="px-6 py-2 bg-slate-950/40 border-t border-slate-800/40 flex items-center gap-2 overflow-x-auto">
-          <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider flex-shrink-0">Quick Topics:</span>
+        <div className="px-6 py-2 bg-[#EFE9DD] border-t border-[rgba(20,28,43,0.12)] flex items-center gap-2 overflow-x-auto">
+          <span className="mono-label text-[10px] text-[#767E8C] flex-shrink-0">[ QUICK TOPICS: ]</span>
           {PRESET_QUESTIONS.map((chip, idx) => (
             <button
               key={idx}
-              onClick={() => {
-                setInputText(chip);
-              }}
+              type="button"
+              onClick={() => handleSendMessage(null, 'standard', chip)}
               disabled={botThinking}
-              className="px-2.5 py-0.5 rounded-full bg-slate-900 hover:bg-slate-800 border border-slate-800 text-[10px] text-slate-400 hover:text-white transition-all flex-shrink-0 disabled:opacity-40"
+              className="mono-label text-[10px] px-2 py-0.5 border border-[rgba(20,28,43,0.16)] hover:bg-[#E5DED0] transition-colors flex-shrink-0 disabled:opacity-40 text-[#141C2B]"
             >
-              💡 {chip}
+              [ {chip} ]
             </button>
           ))}
         </div>
 
         {/* Input Bar */}
-        <form onSubmit={handleSendMessage} className="p-4 bg-slate-900/90 border-t border-slate-800 flex items-center gap-3">
+        <form onSubmit={handleSendMessage} className="p-4 bg-[#E5DED0] border-t border-[rgba(20,28,43,0.16)] flex gap-3">
           <input
             type="text"
             value={inputText}
             onChange={(e) => setInputText(e.target.value)}
-            placeholder="Type your question or doubt here..."
             disabled={botThinking}
-            className="flex-1 px-4 py-3 rounded-xl bg-slate-950 border border-slate-800 text-white text-xs focus:outline-none focus:border-indigo-500 transition-colors disabled:opacity-50"
+            placeholder="[ Type your syllabus question or concept doubt... ]"
+            className="flex-1 bg-[#EFE9DD] border border-[rgba(20,28,43,0.2)] px-4 py-2.5 text-xs mono-label text-[#141C2B] placeholder:text-[#767E8C] focus:outline-none focus:border-[#141C2B]"
           />
           <button
             type="submit"
             disabled={!inputText.trim() || botThinking}
-            className="py-3 px-5 rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white text-xs font-bold shadow-lg shadow-indigo-600/30 flex items-center gap-2 transition-all disabled:opacity-50"
+            className="btn-filled text-[10px] px-4 py-2.5 disabled:opacity-40"
           >
-            {botThinking ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-            <span>{botThinking ? 'Thinking...' : 'Ask'}</span>
+            <Send className="w-3.5 h-3.5" /> [ ASK IBM BOB ]
           </button>
         </form>
 

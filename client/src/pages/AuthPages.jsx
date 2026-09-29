@@ -89,54 +89,52 @@ export function LoginPage({ setUser }) {
 
   return (
     <div className="min-h-[85vh] flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full glass-card p-8 rounded-3xl border border-slate-800 shadow-2xl space-y-6">
+      <div className="max-w-md w-full stationery-card p-8 border border-[#141C2B]/15 bg-[#E5DED0] space-y-6">
         
         {/* Header Branding */}
-        <div className="text-center space-y-2">
-          <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-indigo-600/20 text-indigo-400 mb-2 border border-indigo-500/30 shadow-lg shadow-indigo-500/10">
-            <Sparkles className="w-6 h-6 text-indigo-400" />
+        <div className="text-center space-y-2 border-b border-[#141C2B]/10 pb-5">
+          <div className="inline-flex items-center justify-center w-10 h-10 border border-[#2C4A8F]/30 bg-[#2C4A8F]/10 text-[#2C4A8F] mb-1">
+            <Sparkles className="w-5 h-5 text-[#2C4A8F]" />
           </div>
-          <h2 className="text-2xl font-bold text-white font-outfit">Welcome to EduFlow <span className="gradient-text">AI</span></h2>
-          <p className="text-xs text-slate-400">Intelligent Course Content Automation powered by IBM watsonx.ai</p>
+          <h2 className="text-2xl font-serif text-[#141C2B] tracking-tight">EduFlow <span className="italic text-[#2C4A8F]">AI</span></h2>
+          <p className="text-xs font-mono text-[#141C2B]/70">Intelligent Course Content Automation powered by IBM watsonx.ai</p>
         </div>
 
-        {/* Prominent Role Selectors: Teacher vs Student */}
+        {/* Role Selectors: Teacher vs Student */}
         <div className="space-y-2">
           <div className="grid grid-cols-2 gap-3">
             <button
               type="button"
               onClick={() => handleSelectRole('teacher')}
-              className={`py-3 px-3 rounded-2xl border text-xs font-bold flex flex-col items-center justify-center gap-1 transition-all ${
+              className={`py-2.5 px-3 border text-xs font-mono font-bold flex flex-col items-center justify-center gap-1 transition-all ${
                 selectedRole === 'teacher' || email.toLowerCase().includes('teacher')
-                  ? 'bg-indigo-600/20 border-indigo-500 text-indigo-200 shadow-lg shadow-indigo-600/20 ring-1 ring-indigo-500'
-                  : 'bg-slate-900/80 border-slate-800 text-slate-400 hover:bg-slate-800 hover:text-white'
+                  ? 'bg-[#141C2B] border-[#141C2B] text-[#EFE9DD]'
+                  : 'bg-[#EFE9DD] border-[#141C2B]/15 text-[#141C2B]/70 hover:border-[#141C2B]'
               }`}
             >
-              <span className="text-base">👩‍🏫</span>
-              <span>Sign in as Teacher</span>
+              <span>👩‍🏫 [ Teacher Portal ]</span>
             </button>
             <button
               type="button"
               onClick={() => handleSelectRole('student')}
-              className={`py-3 px-3 rounded-2xl border text-xs font-bold flex flex-col items-center justify-center gap-1 transition-all ${
+              className={`py-2.5 px-3 border text-xs font-mono font-bold flex flex-col items-center justify-center gap-1 transition-all ${
                 selectedRole === 'student' || email.toLowerCase().includes('student')
-                  ? 'bg-emerald-600/20 border-emerald-500 text-emerald-200 shadow-lg shadow-emerald-600/20 ring-1 ring-emerald-500'
-                  : 'bg-slate-900/80 border-slate-800 text-slate-400 hover:bg-slate-800 hover:text-white'
+                  ? 'bg-[#141C2B] border-[#141C2B] text-[#EFE9DD]'
+                  : 'bg-[#EFE9DD] border-[#141C2B]/15 text-[#141C2B]/70 hover:border-[#141C2B]'
               }`}
             >
-              <span className="text-base">🧑‍🎓</span>
-              <span>Sign in as Student</span>
+              <span>🧑‍🎓 [ Student Portal ]</span>
             </button>
           </div>
-          <p className="text-[11px] text-slate-500 text-center font-medium">
-            Quick demo access for judges
+          <p className="text-[10px] font-mono text-[#141C2B]/60 text-center">
+            One-click role toggle for jury evaluation
           </p>
         </div>
 
         {/* Error Notification */}
         {error && (
-          <div className="p-3.5 rounded-xl bg-rose-500/10 border border-rose-500/25 text-rose-400 text-xs font-medium flex items-center gap-2 animate-fade-in">
-            <AlertCircle className="w-4 h-4 flex-shrink-0 text-rose-400" />
+          <div className="p-3 bg-rose-500/10 border border-rose-600/30 text-rose-800 text-xs font-mono flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 flex-shrink-0 text-rose-700" />
             <span>{error}</span>
           </div>
         )}
@@ -144,16 +142,16 @@ export function LoginPage({ setUser }) {
         {/* Form */}
         <form onSubmit={handleLogin} className="space-y-4">
           <div>
-            <label className="block text-xs font-medium text-slate-300 mb-1">Email Address</label>
+            <label className="mono-label text-[11px] block mb-1">Email Classification</label>
             <div className="relative">
-              <Mail className="w-4 h-4 text-slate-500 absolute left-3 top-3.5 pointer-events-none" />
+              <Mail className="w-4 h-4 text-[#141C2B]/50 absolute left-3 top-3 pointer-events-none" />
               <input
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
                 disabled={loading}
-                className="w-full pl-9 pr-4 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-white text-xs focus:outline-none focus:border-indigo-500 transition-colors disabled:opacity-50"
+                className="w-full pl-9 pr-4 py-2 bg-[#EFE9DD] border border-[#141C2B]/20 text-[#141C2B] text-xs font-mono focus:outline-none focus:border-[#2C4A8F] disabled:opacity-50"
                 placeholder="teacher@eduflow.ai"
               />
             </div>
@@ -161,27 +159,27 @@ export function LoginPage({ setUser }) {
 
           <div>
             <div className="flex items-center justify-between mb-1">
-              <label className="block text-xs font-medium text-slate-300">Password</label>
-              <Link to="/forgot-password" className="text-xs text-indigo-400 hover:text-indigo-300 hover:underline transition-colors">
-                Forgot password?
+              <label className="mono-label text-[11px]">Passcode</label>
+              <Link to="/forgot-password" className="text-xs font-mono text-[#2C4A8F] hover:underline">
+                [ Forgot password? ]
               </Link>
             </div>
             <div className="relative">
-              <Lock className="w-4 h-4 text-slate-500 absolute left-3 top-3.5 pointer-events-none" />
+              <Lock className="w-4 h-4 text-[#141C2B]/50 absolute left-3 top-3 pointer-events-none" />
               <input
                 type={showPassword ? 'text' : 'password'}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 disabled={loading}
-                className="w-full pl-9 pr-10 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-white text-xs focus:outline-none focus:border-indigo-500 transition-colors disabled:opacity-50"
+                className="w-full pl-9 pr-10 py-2 bg-[#EFE9DD] border border-[#141C2B]/20 text-[#141C2B] text-xs font-mono focus:outline-none focus:border-[#2C4A8F] disabled:opacity-50"
                 placeholder="••••••••"
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
                 tabIndex={-1}
-                className="absolute right-3 top-3 text-slate-500 hover:text-slate-300 transition-colors focus:outline-none"
+                className="absolute right-3 top-2.5 text-[#141C2B]/50 hover:text-[#141C2B] focus:outline-none"
                 aria-label={showPassword ? 'Hide password' : 'Show password'}
               >
                 {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -192,27 +190,27 @@ export function LoginPage({ setUser }) {
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white text-xs font-bold shadow-lg shadow-indigo-600/30 flex items-center justify-center gap-2 transition-all disabled:opacity-50"
+            className="w-full btn-filled py-2.5 px-4 text-xs font-mono font-bold flex items-center justify-center gap-2 disabled:opacity-50"
           >
             {loading ? (
               <>
-                <Loader2 className="w-4 h-4 animate-spin text-white" />
-                <span>Authenticating...</span>
+                <Loader2 className="w-4 h-4 animate-spin text-[#EFE9DD]" />
+                <span>[ Authenticating... ]</span>
               </>
             ) : (
               <>
-                <span>Sign In to Platform</span>
+                <span>[ Sign In to Platform ]</span>
                 <ArrowRight className="w-4 h-4" />
               </>
             )}
           </button>
         </form>
 
-        <div className="text-center">
-          <p className="text-xs text-slate-400">
+        <div className="text-center pt-2 border-t border-[#141C2B]/10">
+          <p className="text-xs font-mono text-[#141C2B]/70">
             Don't have an account?{' '}
-            <Link to="/register" className="text-indigo-400 hover:underline font-semibold">
-              Create Account
+            <Link to="/register" className="text-[#2C4A8F] hover:underline font-bold">
+              [ Register Scholar/Teacher ]
             </Link>
           </p>
         </div>
@@ -303,19 +301,19 @@ export function RegisterPage({ setUser }) {
 
   return (
     <div className="min-h-[85vh] flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full glass-card p-8 rounded-3xl border border-slate-800 shadow-2xl space-y-6">
+      <div className="max-w-md w-full stationery-card p-8 border border-[#141C2B]/15 bg-[#E5DED0] space-y-6">
         
-        <div className="text-center space-y-2">
-          <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-indigo-600/20 text-indigo-400 mb-2 border border-indigo-500/30 shadow-lg shadow-indigo-500/10">
-            <Sparkles className="w-6 h-6 text-indigo-400" />
+        <div className="text-center space-y-2 border-b border-[#141C2B]/10 pb-4">
+          <div className="inline-flex items-center justify-center w-10 h-10 border border-[#2C4A8F]/30 bg-[#2C4A8F]/10 text-[#2C4A8F] mb-1">
+            <Sparkles className="w-5 h-5 text-[#2C4A8F]" />
           </div>
-          <h2 className="text-2xl font-bold text-white font-outfit">Create Your Account</h2>
-          <p className="text-xs text-slate-400">Join EduFlow AI to automate course creation and learning</p>
+          <h2 className="text-2xl font-serif text-[#141C2B] tracking-tight">Create Repository <span className="italic text-[#2C4A8F]">Account</span></h2>
+          <p className="text-xs font-mono text-[#141C2B]/70">Register for curriculum synthesis and adaptive mastery verification</p>
         </div>
 
         {error && (
-          <div className="p-3.5 rounded-xl bg-rose-500/10 border border-rose-500/25 text-rose-400 text-xs font-medium flex items-center gap-2 animate-fade-in">
-            <AlertCircle className="w-4 h-4 flex-shrink-0 text-rose-400" />
+          <div className="p-3 bg-rose-500/10 border border-rose-600/30 text-rose-800 text-xs font-mono flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 flex-shrink-0 text-rose-700" />
             <span>{error}</span>
           </div>
         )}
@@ -323,45 +321,45 @@ export function RegisterPage({ setUser }) {
         <form onSubmit={handleRegister} className="space-y-4">
           {/* Role Selection */}
           <div>
-            <label className="block text-xs font-medium text-slate-300 mb-1">Select Role</label>
+            <label className="mono-label text-[11px] block mb-1">Account Role Classification</label>
             <div className="grid grid-cols-2 gap-3">
               <button
                 type="button"
                 onClick={() => setRole('teacher')}
-                className={`py-2 px-3 rounded-xl text-xs font-bold border transition-all ${
+                className={`py-2 px-3 text-xs font-mono font-bold border transition-all ${
                   role === 'teacher'
-                    ? 'bg-indigo-600 text-white border-indigo-500 shadow-md shadow-indigo-600/25'
-                    : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-slate-200'
+                    ? 'bg-[#141C2B] text-[#EFE9DD] border-[#141C2B]'
+                    : 'bg-[#EFE9DD] text-[#141C2B]/70 border-[#141C2B]/15 hover:border-[#141C2B]'
                 }`}
               >
-                👩‍🏫 Teacher / Educator
+                [ Teacher / Educator ]
               </button>
               <button
                 type="button"
                 onClick={() => setRole('student')}
-                className={`py-2 px-3 rounded-xl text-xs font-bold border transition-all ${
+                className={`py-2 px-3 text-xs font-mono font-bold border transition-all ${
                   role === 'student'
-                    ? 'bg-emerald-600 text-white border-emerald-500 shadow-md shadow-emerald-600/25'
-                    : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-slate-200'
+                    ? 'bg-[#141C2B] text-[#EFE9DD] border-[#141C2B]'
+                    : 'bg-[#EFE9DD] text-[#141C2B]/70 border-[#141C2B]/15 hover:border-[#141C2B]'
                 }`}
               >
-                🧑‍🎓 Student
+                [ Student / Scholar ]
               </button>
             </div>
           </div>
 
           {/* Full Name */}
           <div>
-            <label className="block text-xs font-medium text-slate-300 mb-1">Full Name</label>
+            <label className="mono-label text-[11px] block mb-1">Full Legal Name</label>
             <div className="relative">
-              <User className="w-4 h-4 text-slate-500 absolute left-3 top-3.5 pointer-events-none" />
+              <User className="w-4 h-4 text-[#141C2B]/50 absolute left-3 top-3 pointer-events-none" />
               <input
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 required
                 disabled={loading}
-                className="w-full pl-9 pr-4 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-white text-xs focus:outline-none focus:border-indigo-500 transition-colors disabled:opacity-50"
+                className="w-full pl-9 pr-4 py-2 bg-[#EFE9DD] border border-[#141C2B]/20 text-[#141C2B] text-xs font-mono focus:outline-none focus:border-[#2C4A8F] disabled:opacity-50"
                 placeholder={role === 'teacher' ? 'Dr. Anita Sharma' : 'Rohan Gupta'}
               />
             </div>
@@ -369,16 +367,16 @@ export function RegisterPage({ setUser }) {
 
           {/* Email */}
           <div>
-            <label className="block text-xs font-medium text-slate-300 mb-1">Email Address</label>
+            <label className="mono-label text-[11px] block mb-1">Email Address</label>
             <div className="relative">
-              <Mail className="w-4 h-4 text-slate-500 absolute left-3 top-3.5 pointer-events-none" />
+              <Mail className="w-4 h-4 text-[#141C2B]/50 absolute left-3 top-3 pointer-events-none" />
               <input
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
                 disabled={loading}
-                className="w-full pl-9 pr-4 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-white text-xs focus:outline-none focus:border-indigo-500 transition-colors disabled:opacity-50"
+                className="w-full pl-9 pr-4 py-2 bg-[#EFE9DD] border border-[#141C2B]/20 text-[#141C2B] text-xs font-mono focus:outline-none focus:border-[#2C4A8F] disabled:opacity-50"
                 placeholder="you@school.edu"
               />
             </div>
@@ -386,9 +384,9 @@ export function RegisterPage({ setUser }) {
 
           {/* Password with Show/Hide Toggle */}
           <div>
-            <label className="block text-xs font-medium text-slate-300 mb-1">Password (min 8 chars)</label>
+            <label className="mono-label text-[11px] block mb-1">Passcode (min 8 chars)</label>
             <div className="relative">
-              <Lock className="w-4 h-4 text-slate-500 absolute left-3 top-3.5 pointer-events-none" />
+              <Lock className="w-4 h-4 text-[#141C2B]/50 absolute left-3 top-3 pointer-events-none" />
               <input
                 type={showPassword ? 'text' : 'password'}
                 value={password}
@@ -396,14 +394,14 @@ export function RegisterPage({ setUser }) {
                 required
                 minLength={8}
                 disabled={loading}
-                className="w-full pl-9 pr-10 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-white text-xs focus:outline-none focus:border-indigo-500 transition-colors disabled:opacity-50"
+                className="w-full pl-9 pr-10 py-2 bg-[#EFE9DD] border border-[#141C2B]/20 text-[#141C2B] text-xs font-mono focus:outline-none focus:border-[#2C4A8F] disabled:opacity-50"
                 placeholder="••••••••"
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
                 tabIndex={-1}
-                className="absolute right-3 top-3 text-slate-500 hover:text-slate-300 transition-colors focus:outline-none"
+                className="absolute right-3 top-2.5 text-[#141C2B]/50 hover:text-[#141C2B] focus:outline-none"
                 aria-label={showPassword ? 'Hide password' : 'Show password'}
               >
                 {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -413,15 +411,15 @@ export function RegisterPage({ setUser }) {
 
           {/* Institution */}
           <div>
-            <label className="block text-xs font-medium text-slate-300 mb-1">School / Institution</label>
+            <label className="mono-label text-[11px] block mb-1">Affiliated Institution</label>
             <div className="relative">
-              <Building className="w-4 h-4 text-slate-500 absolute left-3 top-3.5 pointer-events-none" />
+              <Building className="w-4 h-4 text-[#141C2B]/50 absolute left-3 top-3 pointer-events-none" />
               <input
                 type="text"
                 value={institution}
                 onChange={(e) => setInstitution(e.target.value)}
                 disabled={loading}
-                className="w-full pl-9 pr-4 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-white text-xs focus:outline-none focus:border-indigo-500 transition-colors disabled:opacity-50"
+                className="w-full pl-9 pr-4 py-2 bg-[#EFE9DD] border border-[#141C2B]/20 text-[#141C2B] text-xs font-mono focus:outline-none focus:border-[#2C4A8F] disabled:opacity-50"
                 placeholder="EduFlow Academy"
               />
             </div>
@@ -430,27 +428,27 @@ export function RegisterPage({ setUser }) {
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white text-xs font-bold shadow-lg shadow-indigo-600/30 flex items-center justify-center gap-2 transition-all disabled:opacity-50"
+            className="w-full btn-filled py-2.5 px-4 text-xs font-mono font-bold flex items-center justify-center gap-2 disabled:opacity-50"
           >
             {loading ? (
               <>
-                <Loader2 className="w-4 h-4 animate-spin text-white" />
-                <span>Creating Account...</span>
+                <Loader2 className="w-4 h-4 animate-spin text-[#EFE9DD]" />
+                <span>[ Creating Account... ]</span>
               </>
             ) : (
               <>
-                <span>Register Account</span>
+                <span>[ Register Account ]</span>
                 <ArrowRight className="w-4 h-4" />
               </>
             )}
           </button>
         </form>
 
-        <div className="text-center">
-          <p className="text-xs text-slate-400">
+        <div className="text-center pt-2 border-t border-[#141C2B]/10">
+          <p className="text-xs font-mono text-[#141C2B]/70">
             Already have an account?{' '}
-            <Link to="/login" className="text-indigo-400 hover:underline font-semibold">
-              Sign In
+            <Link to="/login" className="text-[#2C4A8F] hover:underline font-bold">
+              [ Sign In ]
             </Link>
           </p>
         </div>
@@ -486,40 +484,40 @@ export function ForgotPasswordPage() {
 
   return (
     <div className="min-h-[85vh] flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full glass-card p-8 rounded-3xl border border-slate-800 shadow-2xl space-y-6">
+      <div className="max-w-md w-full stationery-card p-8 border border-[#141C2B]/15 bg-[#E5DED0] space-y-6">
 
-        <div className="text-center space-y-2">
-          <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-indigo-600/20 text-indigo-400 mb-2 border border-indigo-500/30">
-            <KeyRound className="w-6 h-6 text-indigo-400" />
+        <div className="text-center space-y-2 border-b border-[#141C2B]/10 pb-4">
+          <div className="inline-flex items-center justify-center w-10 h-10 border border-[#2C4A8F]/30 bg-[#2C4A8F]/10 text-[#2C4A8F] mb-1">
+            <KeyRound className="w-5 h-5 text-[#2C4A8F]" />
           </div>
-          <h2 className="text-2xl font-bold text-white font-outfit">Forgot Password</h2>
-          <p className="text-xs text-slate-400">Enter your email and we'll send you a reset link</p>
+          <h2 className="text-2xl font-serif text-[#141C2B] tracking-tight">Recovery <span className="italic text-[#2C4A8F]">Ledger</span></h2>
+          <p className="text-xs font-mono text-[#141C2B]/70">Enter your email and we'll dispatch a cryptographic reset link</p>
         </div>
 
         {error && (
-          <div className="p-3.5 rounded-xl bg-rose-500/10 border border-rose-500/25 text-rose-400 text-xs font-medium flex items-center gap-2 animate-fade-in">
-            <AlertCircle className="w-4 h-4 flex-shrink-0 text-rose-400" />
+          <div className="p-3 bg-rose-500/10 border border-rose-600/30 text-rose-800 text-xs font-mono flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 flex-shrink-0 text-rose-700" />
             <span>{error}</span>
           </div>
         )}
 
         {message ? (
           <div className="space-y-4">
-            <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-medium text-center flex flex-col items-center gap-2">
-              <CheckCircle className="w-6 h-6" />
-              <span>{message}</span>
-              <span className="text-slate-400">Check your inbox for password reset instructions.</span>
+            <div className="p-4 bg-emerald-500/10 border border-emerald-600/30 text-emerald-800 text-xs font-mono text-center flex flex-col items-center gap-2">
+              <CheckCircle className="w-6 h-6 text-emerald-700" />
+              <span className="font-bold">{message}</span>
+              <span className="text-[#141C2B]/70">Check your inbox for password reset instructions.</span>
             </div>
-            <Link to="/login" className="block w-full py-3 px-4 rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 text-white text-xs font-bold text-center shadow-lg shadow-indigo-600/30 transition-all hover:opacity-90">
-              Back to Sign In
+            <Link to="/login" className="btn-filled block w-full py-2.5 px-4 text-xs font-mono font-bold text-center">
+              [ Back to Sign In ]
             </Link>
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-xs font-medium text-slate-300 mb-1">Email Address</label>
+              <label className="mono-label text-[11px] block mb-1">Registered Email Address</label>
               <div className="relative">
-                <Mail className="w-4 h-4 text-slate-500 absolute left-3 top-3.5 pointer-events-none" />
+                <Mail className="w-4 h-4 text-[#141C2B]/50 absolute left-3 top-3 pointer-events-none" />
                 <input
                   type="email"
                   value={email}
@@ -527,7 +525,7 @@ export function ForgotPasswordPage() {
                   required
                   autoFocus
                   disabled={loading}
-                  className="w-full pl-9 pr-4 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-white text-xs focus:outline-none focus:border-indigo-500 transition-colors disabled:opacity-50"
+                  className="w-full pl-9 pr-4 py-2 bg-[#EFE9DD] border border-[#141C2B]/20 text-[#141C2B] text-xs font-mono focus:outline-none focus:border-[#2C4A8F] disabled:opacity-50"
                   placeholder="you@school.edu"
                 />
               </div>
@@ -536,24 +534,24 @@ export function ForgotPasswordPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white text-xs font-bold shadow-lg shadow-indigo-600/30 flex items-center justify-center gap-2 transition-all disabled:opacity-50"
+              className="w-full btn-filled py-2.5 px-4 text-xs font-mono font-bold flex items-center justify-center gap-2 disabled:opacity-50"
             >
               {loading ? (
                 <>
-                  <Loader2 className="w-4 h-4 animate-spin text-white" />
-                  <span>Sending...</span>
+                  <Loader2 className="w-4 h-4 animate-spin text-[#EFE9DD]" />
+                  <span>[ Dispatching Link... ]</span>
                 </>
               ) : (
                 <>
-                  <span>Send Reset Link</span>
+                  <span>[ Dispatch Reset Link ]</span>
                   <ArrowRight className="w-4 h-4" />
                 </>
               )}
             </button>
 
-            <div className="text-center">
-              <Link to="/login" className="text-xs text-indigo-400 hover:underline font-semibold">
-                ← Back to Sign In
+            <div className="text-center pt-2">
+              <Link to="/login" className="text-xs font-mono text-[#2C4A8F] hover:underline font-bold">
+                [ ← Return to Sign In ]
               </Link>
             </div>
           </form>
@@ -637,35 +635,35 @@ export function ResetPasswordPage() {
 
   return (
     <div className="min-h-[85vh] flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full glass-card p-8 rounded-3xl border border-slate-800 shadow-2xl space-y-6">
+      <div className="max-w-md w-full stationery-card p-8 border border-[#141C2B]/15 bg-[#E5DED0] space-y-6">
 
-        <div className="text-center space-y-2">
-          <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-indigo-600/20 text-indigo-400 mb-2 border border-indigo-500/30">
-            <KeyRound className="w-6 h-6 text-indigo-400" />
+        <div className="text-center space-y-2 border-b border-[#141C2B]/10 pb-4">
+          <div className="inline-flex items-center justify-center w-10 h-10 border border-[#2C4A8F]/30 bg-[#2C4A8F]/10 text-[#2C4A8F] mb-1">
+            <KeyRound className="w-5 h-5 text-[#2C4A8F]" />
           </div>
-          <h2 className="text-2xl font-bold text-white font-outfit">Set New Password</h2>
-          <p className="text-xs text-slate-400">Choose a strong password (minimum 6 characters)</p>
+          <h2 className="text-2xl font-serif text-[#141C2B] tracking-tight">Set New <span className="italic text-[#2C4A8F]">Passcode</span></h2>
+          <p className="text-xs font-mono text-[#141C2B]/70">Enter a secure passcode (minimum 6 characters)</p>
         </div>
 
         {error && (
-          <div className="p-3.5 rounded-xl bg-rose-500/10 border border-rose-500/25 text-rose-400 text-xs font-medium flex items-center gap-2 animate-fade-in">
-            <AlertCircle className="w-4 h-4 flex-shrink-0 text-rose-400" />
+          <div className="p-3 bg-rose-500/10 border border-rose-600/30 text-rose-800 text-xs font-mono flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 flex-shrink-0 text-rose-700" />
             <span>{error}</span>
           </div>
         )}
 
         {message ? (
-          <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-medium text-center flex flex-col items-center gap-2">
-            <CheckCircle className="w-6 h-6" />
-            <span>{message}</span>
-            <span className="text-slate-400">Redirecting to login...</span>
+          <div className="p-4 bg-emerald-500/10 border border-emerald-600/30 text-emerald-800 text-xs font-mono text-center flex flex-col items-center gap-2">
+            <CheckCircle className="w-6 h-6 text-emerald-700" />
+            <span className="font-bold">{message}</span>
+            <span className="text-[#141C2B]/70">Redirecting to platform login...</span>
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-xs font-medium text-slate-300 mb-1">New Password</label>
+              <label className="mono-label text-[11px] block mb-1">New Passcode</label>
               <div className="relative">
-                <Lock className="w-4 h-4 text-slate-500 absolute left-3 top-3.5 pointer-events-none" />
+                <Lock className="w-4 h-4 text-[#141C2B]/50 absolute left-3 top-3 pointer-events-none" />
                 <input
                   type={showPassword ? 'text' : 'password'}
                   value={password}
@@ -674,14 +672,14 @@ export function ResetPasswordPage() {
                   minLength={6}
                   autoFocus
                   disabled={loading}
-                  className="w-full pl-9 pr-10 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-white text-xs focus:outline-none focus:border-indigo-500 transition-colors disabled:opacity-50"
+                  className="w-full pl-9 pr-10 py-2 bg-[#EFE9DD] border border-[#141C2B]/20 text-[#141C2B] text-xs font-mono focus:outline-none focus:border-[#2C4A8F] disabled:opacity-50"
                   placeholder="Min. 6 characters"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
                   tabIndex={-1}
-                  className="absolute right-3 top-3 text-slate-500 hover:text-slate-300 transition-colors focus:outline-none"
+                  className="absolute right-3 top-2.5 text-[#141C2B]/50 hover:text-[#141C2B] focus:outline-none"
                   aria-label={showPassword ? 'Hide password' : 'Show password'}
                 >
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -690,41 +688,41 @@ export function ResetPasswordPage() {
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-slate-300 mb-1">Confirm Password</label>
+              <label className="mono-label text-[11px] block mb-1">Confirm Passcode</label>
               <div className="relative">
-                <Lock className="w-4 h-4 text-slate-500 absolute left-3 top-3.5 pointer-events-none" />
+                <Lock className="w-4 h-4 text-[#141C2B]/50 absolute left-3 top-3 pointer-events-none" />
                 <input
                   type={showPassword ? 'text' : 'password'}
                   value={confirm}
                   onChange={(e) => setConfirm(e.target.value)}
                   required
                   disabled={loading}
-                  className={`w-full pl-9 pr-4 py-2.5 rounded-xl bg-slate-900 border text-white text-xs focus:outline-none transition-colors disabled:opacity-50 ${
+                  className={`w-full pl-9 pr-4 py-2 bg-[#EFE9DD] border text-[#141C2B] text-xs font-mono focus:outline-none disabled:opacity-50 ${
                     confirm && confirm !== password
-                      ? 'border-rose-500 focus:border-rose-500'
-                      : 'border-slate-800 focus:border-indigo-500'
+                      ? 'border-rose-600 focus:border-rose-600'
+                      : 'border-[#141C2B]/20 focus:border-[#2C4A8F]'
                   }`}
                   placeholder="••••••••"
                 />
               </div>
               {confirm && confirm !== password && (
-                <p className="text-xs text-rose-400 mt-1">Passwords don't match</p>
+                <p className="text-xs font-mono text-rose-800 mt-1">Passcodes do not match</p>
               )}
             </div>
 
             <button
               type="submit"
               disabled={loading || (confirm && confirm !== password)}
-              className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white text-xs font-bold shadow-lg shadow-indigo-600/30 flex items-center justify-center gap-2 transition-all disabled:opacity-50"
+              className="w-full btn-filled py-2.5 px-4 text-xs font-mono font-bold flex items-center justify-center gap-2 disabled:opacity-50"
             >
               {loading ? (
                 <>
-                  <Loader2 className="w-4 h-4 animate-spin text-white" />
-                  <span>Resetting...</span>
+                  <Loader2 className="w-4 h-4 animate-spin text-[#EFE9DD]" />
+                  <span>[ Resetting... ]</span>
                 </>
               ) : (
                 <>
-                  <span>Reset Password</span>
+                  <span>[ Reset Passcode ]</span>
                   <ArrowRight className="w-4 h-4" />
                 </>
               )}

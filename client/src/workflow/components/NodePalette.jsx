@@ -53,35 +53,35 @@ export default function NodePalette({ onAddNode }) {
 
   if (isCollapsed) {
     return (
-      <div className="absolute left-4 top-20 z-20">
+      <div className="absolute left-4 top-20 z-20 font-typewriter">
         <button
           onClick={() => setIsCollapsed(false)}
-          className="p-3 bg-slate-900/90 backdrop-blur-xl border border-slate-800 rounded-2xl shadow-2xl text-slate-300 hover:text-white hover:border-purple-500/50 transition-all flex items-center gap-2 group"
+          className="p-3 bg-[#E5DED0] border border-[#141C2B]/20 text-[#141C2B] hover:border-[#141C2B] transition-all flex items-center gap-2 group shadow-sm"
           title="Open Agent Palette"
         >
-          <Layers className="w-5 h-5 text-purple-400 group-hover:scale-110 transition-transform" />
-          <ChevronRight className="w-4 h-4 text-slate-500" />
+          <Layers className="w-5 h-5 text-[#2C4A8F] group-hover:scale-110 transition-transform" />
+          <ChevronRight className="w-4 h-4 text-[#141C2B]/60" />
         </button>
       </div>
     );
   }
 
   return (
-    <aside className="w-72 bg-slate-950/90 backdrop-blur-2xl border-r border-slate-800 flex flex-col h-full shadow-2xl z-20 select-none">
+    <aside className="w-72 bg-[#E5DED0] border-r border-[#141C2B]/15 flex flex-col h-full shadow-sm z-20 select-none font-typewriter">
       {/* Palette Header */}
-      <div className="p-4 border-b border-slate-800/80 flex items-center justify-between">
+      <div className="p-4 border-b border-[#141C2B]/10 flex items-center justify-between">
         <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-xl bg-purple-600/20 border border-purple-500/30 flex items-center justify-center text-purple-400">
+          <div className="w-8 h-8 bg-[#141C2B] text-[#EFE9DD] flex items-center justify-center">
             <Layers className="w-4 h-4" />
           </div>
           <div>
-            <h3 className="text-xs font-bold text-white tracking-wide font-outfit">AI Agent Palette</h3>
-            <p className="text-[10px] text-slate-400 font-mono">11 Modular Nodes</p>
+            <h3 className="text-xs font-mono uppercase tracking-wider font-bold text-[#141C2B]">AI Agent Palette</h3>
+            <p className="text-[10px] text-[#141C2B]/60 font-mono">11 Modular Nodes</p>
           </div>
         </div>
         <button
           onClick={() => setIsCollapsed(true)}
-          className="p-1.5 text-slate-400 hover:text-white hover:bg-slate-900 rounded-lg transition-colors"
+          className="p-1.5 text-[#141C2B]/60 hover:text-[#141C2B] hover:bg-[#EFE9DD] transition-colors"
           title="Collapse Palette"
         >
           <ChevronLeft className="w-4 h-4" />
@@ -89,32 +89,32 @@ export default function NodePalette({ onAddNode }) {
       </div>
 
       {/* Search Input */}
-      <div className="p-3 border-b border-slate-800/60">
+      <div className="p-3 border-b border-[#141C2B]/10">
         <div className="relative">
-          <Search className="w-3.5 h-3.5 absolute left-3 top-2.5 text-slate-500" />
+          <Search className="w-3.5 h-3.5 absolute left-3 top-2.5 text-[#141C2B]/50" />
           <input
             type="text"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             placeholder="Search AI agents..."
-            className="w-full pl-9 pr-3 py-1.5 text-xs bg-slate-900/80 border border-slate-800 rounded-xl text-slate-200 placeholder-slate-500 focus:outline-none focus:border-purple-500/60 transition-colors"
+            className="w-full pl-9 pr-3 py-1.5 text-xs bg-[#EFE9DD] border border-[#141C2B]/20 text-[#141C2B] placeholder-[#141C2B]/40 focus:outline-none focus:border-[#2C4A8F] transition-colors font-mono"
           />
         </div>
       </div>
 
       {/* Category Pills */}
-      <div className="px-3 py-2 border-b border-slate-800/40 flex items-center gap-1.5 overflow-x-auto no-scrollbar">
+      <div className="px-3 py-2 border-b border-[#141C2B]/10 flex items-center gap-1.5 overflow-x-auto no-scrollbar">
         {AGENT_CATEGORIES.map((cat) => (
           <button
             key={cat.id}
             onClick={() => setActiveCategory(cat.id)}
-            className={`px-2.5 py-1 rounded-lg text-[10px] font-semibold whitespace-nowrap transition-all ${
+            className={`px-2.5 py-1 text-[10px] font-mono font-bold whitespace-nowrap transition-all border ${
               activeCategory === cat.id
-                ? 'bg-purple-600 text-white shadow-md shadow-purple-600/30'
-                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'
+                ? 'bg-[#141C2B] text-[#EFE9DD] border-[#141C2B]'
+                : 'text-[#141C2B]/70 hover:text-[#141C2B] hover:bg-[#EFE9DD] border-transparent'
             }`}
           >
-            {cat.label}
+            [ {cat.label} ]
           </button>
         ))}
       </div>
@@ -129,25 +129,18 @@ export default function NodePalette({ onAddNode }) {
               draggable
               onDragStart={(e) => onDragStart(e, agent.agentId)}
               onClick={() => onAddNode(agent.agentId)}
-              className="group p-3 rounded-xl bg-slate-900/60 hover:bg-slate-900 border border-slate-800/80 hover:border-slate-700 transition-all cursor-grab active:cursor-grabbing hover:shadow-lg flex flex-col gap-2"
+              className="group p-3 bg-[#EFE9DD] hover:bg-[#EFE9DD]/80 border border-[#141C2B]/15 hover:border-[#141C2B] transition-all cursor-grab active:cursor-grabbing flex flex-col gap-2"
             >
               <div className="flex items-start justify-between">
                 <div className="flex items-center gap-2.5">
-                  <div
-                    className="w-7 h-7 rounded-lg flex items-center justify-center border shadow-inner"
-                    style={{
-                      backgroundColor: `${agent.accentColor}18`,
-                      borderColor: `${agent.accentColor}30`,
-                      color: agent.accentColor
-                    }}
-                  >
+                  <div className="w-7 h-7 flex items-center justify-center border border-[#141C2B]/20 bg-[#E5DED0] text-[#2C4A8F]">
                     <Icon className="w-3.5 h-3.5" />
                   </div>
                   <div>
-                    <h4 className="text-xs font-semibold text-white group-hover:text-purple-300 transition-colors">
+                    <h4 className="text-xs font-serif font-bold text-[#141C2B] group-hover:text-[#2C4A8F] transition-colors">
                       {agent.label}
                     </h4>
-                    <span className="text-[9px] font-mono text-slate-500 uppercase">
+                    <span className="text-[9px] font-mono text-[#141C2B]/60 uppercase">
                       {agent.category}
                     </span>
                   </div>
@@ -158,22 +151,22 @@ export default function NodePalette({ onAddNode }) {
                     e.stopPropagation();
                     onAddNode(agent.agentId);
                   }}
-                  className="opacity-0 group-hover:opacity-100 p-1 text-slate-400 hover:text-white bg-slate-800 hover:bg-purple-600 rounded-md transition-all shadow"
+                  className="opacity-0 group-hover:opacity-100 p-1 text-[#141C2B] hover:bg-[#141C2B] hover:text-[#EFE9DD] transition-all border border-[#141C2B]/20"
                   title="Add to Canvas"
                 >
                   <Plus className="w-3 h-3" />
                 </button>
               </div>
 
-              <p className="text-[11px] text-slate-400 line-clamp-2 leading-relaxed">
+              <p className="text-[11px] font-mono text-[#141C2B]/70 line-clamp-2 leading-relaxed">
                 {agent.description}
               </p>
 
-              <div className="flex items-center gap-2 pt-1 border-t border-slate-800/40 text-[9px] text-slate-500 font-mono">
+              <div className="flex items-center gap-2 pt-1 border-t border-[#141C2B]/10 text-[9px] text-[#141C2B]/60 font-mono">
                 <span>{agent.inputs.length} in</span>
                 <span>•</span>
                 <span>{agent.outputs.length} out</span>
-                <span className="ml-auto text-indigo-400">{agent.defaultModel.split(' ')[0]}</span>
+                <span className="ml-auto text-[#2C4A8F] font-bold">{agent.defaultModel.split(' ')[0]}</span>
               </div>
             </div>
           );
@@ -181,8 +174,8 @@ export default function NodePalette({ onAddNode }) {
       </div>
 
       {/* Palette Footer Tip */}
-      <div className="p-3 border-t border-slate-800/80 bg-slate-950/60 text-center text-[10px] text-slate-500">
-        💡 Drag agents onto canvas or click to add
+      <div className="p-3 border-t border-[#141C2B]/10 bg-[#E5DED0] text-center text-[10px] font-mono text-[#141C2B]/60">
+        💡 Drag agents onto canvas or click to place
       </div>
     </aside>
   );
