@@ -17,6 +17,8 @@ import ActionCenterPage from './pages/ActionCenterPage';
 import MasteryCheckPage from './pages/MasteryCheckPage';
 import WorkflowStudioPage from './pages/WorkflowStudioPage';
 
+import MakerLandingPage from './pages/MakerLandingPage';
+
 // ponytail: declarative route guard for authentication & role permissions
 function ProtectedRoute({ user, allowedRoles, children }) {
   if (!user) {
@@ -31,6 +33,12 @@ function ProtectedRoute({ user, allowedRoles, children }) {
 function AppContent({ user, setUser }) {
   const location = useLocation();
   const isWorkflowStudio = location.pathname.startsWith('/workflow-studio');
+  const isMakerLanding = location.pathname === '/landing' || (!user && location.pathname === '/');
+
+  // Full-bleed standalone Maker Stationery Landing Page
+  if (isMakerLanding) {
+    return <MakerLandingPage />;
+  }
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-indigo-500 selection:text-white">
@@ -61,6 +69,7 @@ function AppContent({ user, setUser }) {
                 {/* Auth Routes */}
                 <Route path="/login" element={user ? <Navigate to="/" replace /> : <LoginPage setUser={setUser} />} />
                 <Route path="/register" element={user ? <Navigate to="/" replace /> : <RegisterPage setUser={setUser} />} />
+                <Route path="/landing" element={<MakerLandingPage />} />
 
                 {/* Dashboard Home Route (Role-based) */}
                 <Route
@@ -73,7 +82,7 @@ function AppContent({ user, setUser }) {
                         <StudentDashboard user={user} />
                       )
                     ) : (
-                      <Navigate to="/login" replace />
+                      <MakerLandingPage />
                     )
                   }
                 />

@@ -12,13 +12,23 @@ export default {
           darkBlue: '#0043ce',
           purple: '#8a3ffc',
           cyan: '#1192e8',
-          teal: '#009d9a',
-          slate: '#161616'
+          teal: '#009d9a'
+        },
+        stationery: {
+          ground: '#EFE9DD',
+          groundSec: '#E5DED0',
+          ink: '#141C2B',
+          inkSec: '#4A5364',
+          muted: '#767E8C',
+          blue: '#2C4A8F',
+          hairline: 'rgba(20,28,43,0.16)'
         }
       },
       fontFamily: {
         sans: ['Inter', 'sans-serif'],
-        outfit: ['Outfit', 'sans-serif']
+        outfit: ['Outfit', 'sans-serif'],
+        newsreader: ['Newsreader', 'Georgia', 'serif'],
+        typewriter: ['"Courier Prime"', 'Courier', 'monospace']
       }
     },
   },

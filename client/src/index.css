@@ -160,3 +160,65 @@
   cursor: grabbing;
 }
 
+/* ==========================================================================
+   Stationery Maker's Landing Page Styles & Motion Models
+   Spec: Warm paper ground (#EFE9DD), ink (#141C2B), ink blue (#2C4A8F),
+   Newsreader serif + Courier Prime typewriter, 0 border radius everywhere.
+   ========================================================================== */
+
+.stationery-page {
+  --bg-ground: #EFE9DD;
+  --bg-ground-sec: #E5DED0;
+  --ink-primary: #141C2B;
+  --ink-sec: #4A5364;
+  --ink-muted: #767E8C;
+  --ink-blue: #2C4A8F;
+  --hairline: rgba(20, 28, 43, 0.16);
+
+  background-color: var(--bg-ground);
+  color: var(--ink-primary);
+  font-family: 'Courier Prime', Courier, monospace;
+  letter-spacing: 0.07em;
+  line-height: 1.9;
+}
+
+.stationery-page * {
+  border-radius: 0 !important;
+}
+
+.font-newsreader {
+  font-family: 'Newsreader', Georgia, serif;
+  letter-spacing: -0.02em;
+}
+
+.font-typewriter {
+  font-family: 'Courier Prime', Courier, monospace;
+}
+
+.stationery-hairline-b {
+  border-bottom: 1px solid rgba(20, 28, 43, 0.16);
+}
+
+.stationery-hairline-t {
+  border-top: 1px solid rgba(20, 28, 43, 0.16);
+}
+
+.stationery-hairline-r {
+  border-right: 1px solid rgba(20, 28, 43, 0.16);
+}
+
+.stationery-hairline-l {
+  border-left: 1px solid rgba(20, 28, 43, 0.16);
+}
+
+.stationery-hairline-all {
+  border: 1px solid rgba(20, 28, 43, 0.16);
+}
+
+/* Reduced motion accessibility */
+@media (prefers-reduced-motion: reduce) {
+  .travelling-product {
+    display: none !important;
+  }
+}
+
