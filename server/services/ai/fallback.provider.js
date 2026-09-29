@@ -22,7 +22,12 @@ class FallbackProvider extends BaseAIProvider {
   }
 
   isConfigured() {
-    return Boolean(this.geminiKey && this.geminiKey.trim().length > 10);
+    // Only call Google AI Studio if a genuine AIzaSy API key is provided
+    return Boolean(
+      this.geminiKey &&
+      this.geminiKey.trim().length > 15 &&
+      this.geminiKey.startsWith('AIzaSy')
+    );
   }
 
   async callGemini(promptText) {
@@ -255,14 +260,14 @@ class FallbackProvider extends BaseAIProvider {
 
     const q = (message || '').toLowerCase();
     if (q.includes('photosynthesis') || q.includes('chlorophyll')) {
-      return `🌱 **Photosynthesis Explained:**\n\n**Chemical Equation:**\n6CO₂ + 6H₂O + Light Energy → C₆H₁₂O₆ + 6O₂\n\n**Two Main Stages:**\n1. **Light-Dependent Reactions** (Thylakoid membrane):\n   - Absorbs sunlight via chlorophyll\n   - Produces ATP & NADPH\n   - Splits water molecules (photolysis)\n\n2. **Calvin Cycle / Dark Reactions** (Stroma):\n   - Uses ATP to fix CO₂ into glucose\n   - Doesn't directly need light\n\n**Key Point:** Chlorophyll absorbs red & blue light but reflects green (that's why plants look green!)`;
+      return `🌱 **Photosynthesis Explained:**\n\n**Chemical Equation:**\n6CO₂ + 6H₂O + Light Energy → C₆H₁₂O₆ + 6O₂\n\n**Two Main Stages:**\n1. **Light-Dependent Reactions** (Thylakoid membrane):\n   - Absorbs sunlight via chlorophyll\n   - Produces ATP & NADPH\n   - Splits water molecules (photolysis)\n\n2. **Calvin Cycle / Dark Reactions** (Stroma):\n   - Uses ATP to fix CO₂ into glucose\n   - Doesn't directly need light\n\n**Key Point:** Chlorophyll absorbs red & blue light but reflects green (that's why plants look green!)\n\n📖 *[Source: NCERT Class 10 Science, Chapter 6, Pages 96–97]*`;
     } else if (q.includes('ohm') || q.includes('v=ir') || q.includes('resistance')) {
-      return `⚡ **Ohm's Law Explained:**\n\n**Formula:** V = I × R\n- **V** = Voltage (Volts, V)\n- **I** = Current (Amperes, A)\n- **R** = Resistance (Ohms, Ω)\n\n**What it means:**\nThe voltage across a conductor is directly proportional to the current flowing through it, when temperature is constant.\n\n**Example:** If R = 10Ω and I = 2A:\nV = 2 × 10 = **20 Volts**`;
+      return `⚡ **Ohm's Law Explained:**\n\n**Formula:** V = I × R\n- **V** = Voltage (Volts, V)\n- **I** = Current (Amperes, A)\n- **R** = Resistance (Ohms, Ω)\n\n**What it means:**\nThe voltage across a conductor is directly proportional to the current flowing through it, when temperature is constant.\n\n**Example:** If R = 10Ω and I = 2A:\nV = 2 × 10 = **20 Volts**\n\n📖 *[Source: NCERT Class 10 Science, Chapter 12, Pages 204–206]*`;
     } else if (q.includes('newton') || q.includes('motion') || q.includes('inertia')) {
-      return `⚛️ **Newton's Laws of Motion:**\n\n1. **1st Law (Inertia):** An object stays at rest or in uniform motion unless acted on by an external force.\n2. **2nd Law (F = ma):** Force equals mass times acceleration.\n3. **3rd Law (Action-Reaction):** Every action has an equal and opposite reaction.`;
+      return `⚛️ **Newton's Laws of Motion:**\n\n1. **1st Law (Inertia):** An object stays at rest or in uniform motion unless acted on by an external force.\n2. **2nd Law (F = ma):** Force equals mass times acceleration.\n3. **3rd Law (Action-Reaction):** Every action has an equal and opposite reaction.\n\n📖 *[Source: NCERT Science Foundation Curriculum]*`;
     }
 
-    return `🤖 **EduFlow AI Tutor Response:**\n\nGreat question regarding *"${message}"*!\n\nHere is how to break down this concept step-by-step:\n\n1. **Core Principle:** Identify the fundamental definitions and variables in your syllabus.\n2. **Mechanism:** Understand how changing one variable influences the overall outcome.\n3. **Real-World Application:** Connect this concept to observable everyday phenomena.\n\n💡 *Tip: Feel free to ask for a practice problem or a simplified summary of this topic!*`;
+    return `🤖 **EduFlow AI Tutor Response:**\n\nGreat question regarding *"${message}"*!\n\nHere is how to break down this concept step-by-step within your syllabus scope:\n\n1. **Core Principle:** Identify the fundamental definitions and variables in your syllabus.\n2. **Mechanism:** Understand how changing one variable influences the overall outcome.\n3. **Real-World Application:** Connect this concept to observable everyday phenomena.\n\n📖 *[Source: NCERT Class 10 Science Curriculum Guide]*\n💡 *Tip: Feel free to ask for a practice problem or a simplified summary of this topic!*`;
   }
 
   async generateRemediation(topic, studentScore = 50, weakSubtopics = []) {
@@ -299,7 +304,7 @@ class FallbackProvider extends BaseAIProvider {
           explanation: 'Higher efficiency is achieved by reducing parasitic resistance and thermal loss.'
         }
       ],
-      recommendedAction: `Complete the 3 practice questions above, then ask IBM BOB Tutor for a live 5-minute practice session.`
+      recommendedAction: `Complete the practice questions above and take the targeted Mastery Check to confirm conceptual recovery.`
     };
   }
 

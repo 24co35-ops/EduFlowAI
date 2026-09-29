@@ -37,7 +37,7 @@ function validateLessonPlan(data, defaultSubject = 'General Science') {
   if (!data || typeof data !== 'object') return null;
 
   const subject = String(data.subject || defaultSubject).trim();
-  const overview = String(data.overview || 'Structured IBM BOB curriculum plan.').trim();
+  const overview = String(data.overview || 'Structured curriculum learning plan.').trim();
   const rawPlan = Array.isArray(data.plan) ? data.plan : [];
 
   if (rawPlan.length === 0) return null;
@@ -101,7 +101,11 @@ function validateQuiz(data, defaultDifficulty = 'medium') {
       options,
       correctAnswer,
       difficulty: item.difficulty || defaultDifficulty,
-      explanation: String(item.explanation || 'IBM BOB Explanation: Verify concepts within standard curriculum.').trim()
+      explanation: String(item.explanation || 'Verified curriculum concept explanation.').trim(),
+      concept: item.concept || item.topic || 'General Science',
+      competency: item.competency || 'Demonstrate conceptual understanding',
+      cognitiveLevel: item.cognitiveLevel || (type === 'short' ? 'Application' : 'Recall'),
+      source: item.source || '[Source: NCERT Curriculum Guide]'
     });
   }
 

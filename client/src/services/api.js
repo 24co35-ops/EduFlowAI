@@ -66,4 +66,17 @@ export const generateRemediation = (data) => API.post('/student/remediation', da
 // Diagnostic Health API
 export const getHealth = (diagnostics = true) => API.get(`/health?diagnostics=${diagnostics}`);
 
+// Curriculum Twin API
+export const getCurriculum = () => API.get('/curriculum');
+export const getConcepts = () => API.get('/curriculum/concepts');
+export const getConceptById = (id) => API.get(`/curriculum/concept/${id}`);
+
+// Intervention & Action Center API
+export const getActionCenterData = () => API.get('/interventions/action-center');
+export const assignIntervention = (data) => API.post('/interventions/assign', data);
+export const getNextBestAction = () => API.get('/interventions/next-best-action');
+export const getMasteryCheckQuestions = (conceptId) => API.get(`/interventions/mastery-check/questions?conceptId=${encodeURIComponent(conceptId || '')}`);
+export const submitMasteryCheck = (data) => API.post('/interventions/mastery-check/submit', data);
+export const getMyInterventions = () => API.get('/interventions/my');
+
 export default API;

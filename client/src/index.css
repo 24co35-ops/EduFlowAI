@@ -115,3 +115,48 @@
 .animate-subtle-glow {
   animation: subtle-glow 3s infinite ease-in-out;
 }
+
+/* AI Execution Pulse Glow */
+@keyframes node-exec-glow {
+  0%, 100% {
+    box-shadow: 0 0 20px -2px rgba(6, 182, 212, 0.4), 0 0 10px rgba(168, 85, 247, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 40px 2px rgba(6, 182, 212, 0.7), 0 0 20px rgba(168, 85, 247, 0.5);
+  }
+}
+
+.animate-node-exec {
+  animation: node-exec-glow 1.8s infinite ease-in-out;
+}
+
+/* Traveling Data Pulse animation for canvas */
+@keyframes flow-dash {
+  to {
+    stroke-dashoffset: -24;
+  }
+}
+
+.animate-flow-dash {
+  stroke-dasharray: 6, 6;
+  animation: flow-dash 1s linear infinite;
+}
+
+/* Custom Canvas Port Handle Glow */
+.react-flow__handle {
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s ease !important;
+}
+
+.react-flow__handle:hover {
+  transform: scale(1.4) !important;
+  box-shadow: 0 0 12px currentColor !important;
+}
+
+/* React Flow Background styling */
+.react-flow__pane {
+  cursor: grab;
+}
+.react-flow__pane:active {
+  cursor: grabbing;
+}
+

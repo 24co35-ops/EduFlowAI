@@ -1,5 +1,6 @@
-# EduFlow AI — Intelligent Course-Content Automation & Learning Intelligence Platform
+# EduFlow AI — Learning Intervention Intelligence Platform
 
+> **Transforming Static Syllabi into Living Concept Graphs, Evidence-Backed Mastery, and Closed-Loop Learning Recovery**  
 > **Powered by IBM watsonx.ai (Granite 13B & 20B Models)**  
 > *Live Deployment:* [https://edu-flow-ai-six.vercel.app/](https://edu-flow-ai-six.vercel.app/)  
 > *GitHub Repository:* [https://github.com/24co35-ops/EduFlowAI](https://github.com/24co35-ops/EduFlowAI)
@@ -8,32 +9,49 @@
 
 ## 1. Product Overview
 
-EduFlow AI is an enterprise-grade education workflow platform that transforms static curriculum and syllabi into structured daily lesson plans, auto-generated assessments, and closed-loop personalized student remediation. Powered by **IBM watsonx.ai Granite models**, EduFlow AI automates educator administrative overhead while providing transparent, measurable visibility into student understanding.
+EduFlow AI is an enterprise-grade **Learning Intervention Intelligence Platform** engineered for modern education institutions. Moving beyond generic "AI chatbots" and one-off lesson planning tools, EduFlow AI bridges curriculum upload to granular, evidence-based learning recovery:
+
+1. **Curriculum Twin:** Ingests syllabus documents into an interactive, versioned digital concept graph with chapter-topic-concept hierarchies, prerequisite chains, and source citations.
+2. **Learning Evidence Graph:** Maps every assessment question atomically to target concepts and cognitive levels, tracking student competencies deterministically.
+3. **Concept Mastery Engine:** Computes real-time, fine-grained concept mastery scores and detects recurring misconceptions.
+4. **Closed-Loop Intervention Engine:** Automatically identifies learning gaps, delivers 1-click teacher interventions, assigns student Next Best Actions, and verifies recovery through targeted Mastery Checks with measurable mastery deltas.
+5. **Honest AI Provenance:** Fully compliant with IBM watsonx.ai hackathon guardrails, featuring transparent telemetry (`provider`, `model`, `latencyMs`, `fallbackUsed`) and verified RAG grounding.
 
 ---
 
 ## 2. Problem & Solution
 
 ### The Problem
-- **Educator Burnout:** Teachers spend 10–15 hours every week manually authoring lesson plans, assembling quizzes, and grading subjective answers.
-- **Disconnected Learning Gaps:** Students lack instant, curriculum-grounded assistance outside class and cannot pinpoint their specific conceptual weak areas.
-- **Generic "AI Chatbots":** Most AI tools act as open-ended chatbots without curriculum grounding, structured output validation, or closed-loop remediation.
+- **The Generic AI Trap:** Most edtech AI platforms merely act as open-ended chatbots or ungrounded quiz generators with no curricular anchor or learning memory.
+- **Invisible Learning Gaps:** Traditional gradebooks show aggregate letter grades (e.g., "72% in Physics") without identifying which foundational concept broke down.
+- **Open-Loop Remediation:** Even when quizzes pinpoint weaknesses, remediation is rarely measured or verified — teachers have no proof that a student overcame a specific misconception.
 
 ### The EduFlow AI Closed Loop
 ```text
-Curriculum / Syllabus PDF
-           ↓
-Plan: 5-Day Structured Lesson Plan (Granite 13B Instruct)
-           ↓
-Teach: Multilingual Content in 5+ Indian Languages (Granite 20B Multilingual)
-           ↓
-Assess: Adaptive Quizzes & NLP Auto-Grading (Granite 13B Instruct)
-           ↓
-Diagnose: Transparent 5-Factor Topic Mastery Engine
-           ↓
-Remediate: 3-Min AI Explanations & Targeted Practice Checks (Granite 13B)
-           ↓
-Mastery Achieved ↺
+┌─────────────────────────────────────────────────────────────┐
+│                 1. Curriculum Twin Graph                    │
+│   Syllabus PDF ➔ Concept Graph + Prerequisites + Citations  │
+└──────────────────────────────┬──────────────────────────────┘
+                               │
+┌──────────────────────────────▼──────────────────────────────┐
+│             2. Blueprint Assessment & Evidence              │
+│   Adaptive Quizzes tagged to Concepts & Cognitive Levels     │
+└──────────────────────────────┬──────────────────────────────┘
+                               │
+┌──────────────────────────────▼──────────────────────────────┐
+│             3. Real-Time Mastery & Gap Detection            │
+│   Question-level Evidence logged to Learning Graph           │
+└──────────────────────────────┬──────────────────────────────┘
+                               │
+┌──────────────────────────────▼──────────────────────────────┐
+│             4. Teacher Action Center & Dispatch             │
+│   Top Weak Concepts ➔ 1-Click Targeted Intervention Assign  │
+└──────────────────────────────┬──────────────────────────────┘
+                               │
+┌──────────────────────────────▼──────────────────────────────┐
+│             5. Closed-Loop Mastery Check & Recovery         │
+│   Student completes Check ➔ Measured Mastery Delta Recorded │
+└─────────────────────────────────────────────────────────────┘
 ```
 
 ---
@@ -41,22 +59,26 @@ Mastery Achieved ↺
 ## 3. Core Features
 
 ### 👩‍🏫 Teacher Workflow
-- **Syllabus to 5-Day Lesson Plan (F1):** Ingests PDF or raw text, generates structured 5-day plans with daily durations, learning objectives, and classroom activities.
+- **Teacher Action Center (NEW):** Command center showing high-priority class learning gaps, affected student counts, top detected misconceptions, and 1-click remediation assignment.
+- **Curriculum Twin Explorer (NEW):** Visual interactive concept graph displaying prerequisite chains, learning competencies, source citations, and aggregated class mastery levels.
+- **Syllabus to 5-Day Lesson Plan (F1):** Ingests syllabus PDF or text, generates structured 5-day plans with daily durations, learning objectives, and classroom activities.
 - **In-Place Plan Editor:** Allows educators to modify topics, durations, and objectives with database persistence.
 - **Auto Quiz Builder & Editor (F2):** Synthesizes MCQs, True/False, and Short Answer questions with explanations; supports single-question regeneration and in-place editing before publishing.
 - **Multilingual Localization (F3):** Translates lesson plans into Hindi, Marathi, Tamil, Telugu, and Kannada using Granite 20B Multilingual.
-- **Classroom Intelligence & "Who Needs Help?" (F8):** Real-time accuracy heatmaps, topic failure rate alerts, and student risk identification with 1-click remediation dispatch.
+- **Classroom Intelligence & "Who Needs Help?" (F8):** Real-time accuracy heatmaps, topic failure rate alerts, and student risk identification.
 
 ### 🧑‍🎓 Student Workflow
-- **Adaptive Practice Quizzes & NLP Auto-Grading (F6 & F7):** Instant grading of objective questions combined with Granite NLP evaluation of short answers with constructive feedback.
+- **Intervention Mastery Check (NEW):** Closed-loop assessment to verify conceptual recovery after remediation, complete with instant pre/post mastery delta scoring and evidence logging.
+- **Next Best Action Guidance (NEW):** Prioritized learning queue directing students to their highest-leverage review topics based on diagnostic mastery data.
+- **Adaptive Practice Quizzes & Deterministic Auto-Grading (F6 & F7):** Exact match for objective questions combined with Granite NLP evaluation for subjective explanations.
 - **Transparent Multi-Factor Topic Mastery Engine:** Computes weighted mastery ($40\%$ recent quiz, $25\%$ historical average, $15\%$ consistency, $10\%$ difficulty factor, $10\%$ improvement trend) across 5 mastery tiers.
-- **Closed-Loop AI Remediation (P1):** Generates a 3-minute explanation, real-world analogy, misconception alert, and 3 interactive practice questions for struggling students.
 - **Curriculum-Grounded AI Doubt Tutor (F4):** Conversational AI tutor with multi-turn history, syllabus bounding, and quick action chips (*"Simplify"*, *"Real-World Example"*, *"Quiz Me"*).
 - **Interactive 3D Flashcards (F5):** Bullet-point executive summaries and flip study cards with mobile touch and keyboard navigation.
 
 ### 🛠️ Platform & Observability
+- **Truthful AI Evidence Badges:** Displays exact model provenance (`IBM watsonx.ai Granite 13B/20B` vs Fallback engine) and real response latencies.
 - **Real-Time AI Diagnostics Panel:** Live telemetry tracking latency, request counts, validation status, and active IBM Granite models without exposing sensitive credentials.
-- **Dual-Mode Persistence:** MongoDB Atlas cluster integration with automated in-memory fallback for zero-setup local evaluation.
+- **Dual-Mode Persistence:** Supabase Postgres integration with automated in-memory fallback for zero-setup local evaluation.
 
 ---
 
@@ -142,7 +164,7 @@ npm run dev
 
 ## 8. Verification & Test Suite
 
-Run the master 11-step automated verification suite:
+Run the master 14-step automated verification suite:
 ```bash
 node server/test_audit_fixes.js
 ```
@@ -155,6 +177,23 @@ node server/test_audit_fixes.js
 - AI Remediation Loop generation (`POST /api/student/remediation`)
 - Curriculum doubt solver with action chips (`simplify`, `example`, `quiz_me`)
 - Live diagnostic telemetry & observability metrics
+- User registration validation & duplicate prevention
+- Role mismatch rejection on authentication
+
+Run the Curriculum & Closed-Loop Intervention Test Suite:
+```bash
+node server/test_intervention_endpoints.js
+```
+
+Run the AI Grounding & RAG Benchmark Suite:
+```bash
+node tests/ai/benchmark.js
+```
+
+Verify Frontend Client Build:
+```bash
+npm run build --prefix client
+```
 
 ---
 

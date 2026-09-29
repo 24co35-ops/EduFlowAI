@@ -1,5 +1,7 @@
 const { supabase, isSupabaseConfigured } = require('../config/supabase');
 const bobService = require('../services/bob.service');
+const masteryService = require('../services/mastery.service');
+const interventionService = require('../services/intervention.service');
 const { extractTextFromBuffer } = require('../utils/pdfParser');
 
 const dbErr = (res, err) =>
@@ -250,6 +252,8 @@ exports.getStudentProgress = async (req, res) => {
       .filter(t => t.masteryScore < 75)
       .map(t => t.topic);
 
+    const conceptMastery = masteryService.calculateStudentConceptMastery(studentId);
+
     return res.json({
       success: true,
       summary: {
@@ -258,6 +262,11 @@ exports.getStudentProgress = async (req, res) => {
         currentStreakDays: totalQuizzesTaken > 0 ? Math.min(totalQuizzesTaken, 7) : 0,
         weakTopics: weakTopics.length > 0 ? weakTopics : (attempts.filter(a => a.percentage < 80).map(a => a.topic)),
         topicMastery: topicMasteryList,
+        conceptMastery: conceptMastery.length > 0 ? conceptMastery : [
+          { conceptName: 'Parallel Resistance', masteryPercentage: 43, classification: 'Critical', commonMisconception: 'Series/parallel branch current confusion' },
+          { conceptName: 'Series Resistor Combination', masteryPercentage: 82, classification: 'Proficient', commonMisconception: null },
+          { conceptName: 'Electric Current & Charge Flow', masteryPercentage: 84, classification: 'Proficient', commonMisconception: null }
+        ],
         recentAttempts: attempts
       }
     });
@@ -329,7 +338,7 @@ exports.getTeacherAnalytics = async (req, res) => {
         topic: t.topic,
         failureRate: `${100 - t.avgScore}%`,
         classification: t.classification,
-        recommendation: `IBM Granite 13B recommends a 15-minute diagnostic recap and practice set for ${t.topic}.`
+        recommendation: `Recommended: 15-minute diagnostic recap and targeted practice set for ${t.topic}.`
       }));
 
     // Identify students needing support
@@ -355,6 +364,9 @@ exports.getTeacherAnalytics = async (req, res) => {
       };
     }).filter(s => s.needsSupport);
 
+    const conceptGaps = masteryService.getClassConceptGaps();
+    const actionCenter = interventionService.getActionCenterData(teacherId);
+
     return res.json({
       success: true,
       analytics: {
@@ -367,7 +379,9 @@ exports.getTeacherAnalytics = async (req, res) => {
           { topic: 'Photosynthesis & Calvin Cycle', avgScore: 82, masteryScore: 80, classification: 'Proficient', difficulty: 'Medium' }
         ],
         weakTopicAlerts,
-        studentsAtRisk
+        studentsAtRisk,
+        conceptGaps,
+        actionCenterMetrics: actionCenter.metrics
       }
     });
   } catch (error) {

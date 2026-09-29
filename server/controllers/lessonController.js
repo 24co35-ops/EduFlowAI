@@ -21,6 +21,8 @@ const normalizeLesson = (l) => l ? ({
   createdAt: l.created_at
 }) : l;
 
+const fallbackLessons = new Map();
+
 exports.generateLessonPlan = async (req, res) => {
   if (!isSupabaseConfigured()) return noDb(res);
   try {
@@ -41,7 +43,7 @@ exports.generateLessonPlan = async (req, res) => {
     const bobResult = await bobService.generateLessonPlan(syllabusText, subject, language);
     const userId = req.user.id;
     const cleanSubject = bobResult.subject || subject;
-    const cleanOverview = bobResult.overview || 'IBM BOB Generated Plan';
+    const cleanOverview = bobResult.overview || 'Structured Curriculum Lesson Plan';
     const cleanPlan = Array.isArray(bobResult.plan) ? bobResult.plan : [];
 
     if (isUUID(userId)) {
@@ -58,7 +60,9 @@ exports.generateLessonPlan = async (req, res) => {
       if (!error && data) {
         return res.status(201).json({ success: true, lesson: normalizeLesson(data), _aiMetadata: bobResult._aiMetadata });
       }
-      console.warn('[Lesson] Database insert note:', error?.message);
+      if (error && error.code !== '23503') {
+        console.warn('[Lesson] Database insert note:', error?.message);
+      }
     }
 
     // Resilient fallback: return AI generated lesson with temporary id
@@ -73,6 +77,7 @@ exports.generateLessonPlan = async (req, res) => {
       language,
       created_at: new Date().toISOString()
     };
+    fallbackLessons.set(fallbackLesson.id, fallbackLesson);
     return res.status(201).json({ success: true, lesson: normalizeLesson(fallbackLesson), _aiMetadata: bobResult._aiMetadata });
   } catch (err) {
     console.error('[Lesson] generate error:', err.message);
@@ -87,16 +92,20 @@ exports.getLessons = async (req, res) => {
     let query = supabase.from('lessons').select('*').order('created_at', { ascending: false });
 
     if (req.user.role === 'teacher') {
-      if (!isUUID(userId)) return res.json({ success: true, lessons: [] });
+      if (!isUUID(userId)) {
+        const memoryMatches = Array.from(fallbackLessons.values()).filter(l => l.teacher_id === userId);
+        return res.json({ success: true, lessons: memoryMatches.map(normalizeLesson) });
+      }
       query = query.eq('teacher_id', userId);
     }
 
     const { data, error } = await query;
-    if (error) {
-      console.warn('[Lesson] fetch note:', error.message);
-      return res.json({ success: true, lessons: [] });
+    let results = (data || []).map(normalizeLesson);
+    if (results.length === 0 && fallbackLessons.size > 0) {
+      const memoryMatches = Array.from(fallbackLessons.values()).filter(l => req.user.role !== 'teacher' || l.teacher_id === userId);
+      results = memoryMatches.map(normalizeLesson);
     }
-    return res.json({ success: true, lessons: (data || []).map(normalizeLesson) });
+    return res.json({ success: true, lessons: results });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message || 'Error fetching lessons' });
   }
@@ -105,16 +114,24 @@ exports.getLessons = async (req, res) => {
 exports.getLessonById = async (req, res) => {
   if (!isSupabaseConfigured()) return noDb(res);
   try {
-    if (isUUID(req.params.id)) {
-      const { data, error } = await supabase.from('lessons').select('*').eq('id', req.params.id).single();
-      if (!error && data) {
-        if (req.user.role === 'teacher' && data.teacher_id !== req.user.id && req.user.role !== 'admin') {
-          return res.status(403).json({ success: false, message: 'Access denied.' });
-        }
-        return res.json({ success: true, lesson: normalizeLesson(data) });
+    const lessonId = req.params.id;
+    let data = null;
+    if (isUUID(lessonId)) {
+      const resData = await supabase.from('lessons').select('*').eq('id', lessonId).single();
+      if (!resData.error && resData.data) {
+        data = resData.data;
       }
     }
-    return res.status(404).json({ success: false, message: 'Lesson plan not found.' });
+    if (!data && fallbackLessons.has(lessonId)) {
+      data = fallbackLessons.get(lessonId);
+    }
+    if (!data) {
+      return res.status(404).json({ success: false, message: 'Lesson plan not found.' });
+    }
+    if (req.user.role === 'teacher' && data.teacher_id !== req.user.id && req.user.role !== 'admin') {
+      return res.status(403).json({ success: false, message: 'Access denied.' });
+    }
+    return res.json({ success: true, lesson: normalizeLesson(data) });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message || 'Error fetching lesson plan' });
   }
@@ -123,6 +140,8 @@ exports.getLessonById = async (req, res) => {
 exports.updateLessonPlan = async (req, res) => {
   if (!isSupabaseConfigured()) return noDb(res);
   try {
+    const lessonId = req.params.id;
+    const userId = req.user.id;
     const { subject, overview, plan, language } = req.body;
     const updates = {};
     if (subject)  updates.subject  = subject;
@@ -130,10 +149,29 @@ exports.updateLessonPlan = async (req, res) => {
     if (plan)     updates.plan     = plan;
     if (language) updates.language = language;
 
-    if (isUUID(req.params.id) && isUUID(req.user.id)) {
+    let existing = null;
+    if (isUUID(lessonId)) {
+      const resData = await supabase.from('lessons').select('*').eq('id', lessonId).single();
+      if (!resData.error && resData.data) {
+        existing = resData.data;
+      }
+    }
+    if (!existing && fallbackLessons.has(lessonId)) {
+      existing = fallbackLessons.get(lessonId);
+    }
+
+    if (!existing) {
+      return res.status(404).json({ success: false, message: 'Lesson plan not found.' });
+    }
+
+    if (existing.teacher_id !== userId && req.user.role !== 'admin') {
+      return res.status(403).json({ success: false, message: 'Access denied: You do not own this lesson plan.' });
+    }
+
+    if (isUUID(lessonId) && isUUID(userId)) {
       const { data, error } = await supabase
         .from('lessons').update(updates)
-        .eq('id', req.params.id).eq('teacher_id', req.user.id)
+        .eq('id', lessonId).eq('teacher_id', userId)
         .select().single();
       if (!error && data) {
         return res.json({ success: true, lesson: normalizeLesson(data) });
@@ -141,14 +179,11 @@ exports.updateLessonPlan = async (req, res) => {
     }
 
     const updated = {
-      id: req.params.id,
-      teacher_id: req.user.id,
-      subject: subject || 'General Science',
-      overview: overview || 'Updated Overview',
-      plan: plan || [],
-      language: language || 'en',
-      created_at: new Date().toISOString()
+      ...existing,
+      ...updates,
+      updated_at: new Date().toISOString()
     };
+    fallbackLessons.set(lessonId, updated);
     return res.json({ success: true, lesson: normalizeLesson(updated) });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message || 'Error updating lesson plan' });
@@ -158,11 +193,32 @@ exports.updateLessonPlan = async (req, res) => {
 exports.deleteLessonPlan = async (req, res) => {
   if (!isSupabaseConfigured()) return noDb(res);
   try {
-    if (isUUID(req.params.id) && isUUID(req.user.id)) {
-      const { error } = await supabase.from('lessons')
-        .delete().eq('id', req.params.id).eq('teacher_id', req.user.id);
-      if (error) console.warn('[Lesson] delete note:', error.message);
+    const lessonId = req.params.id;
+    const userId = req.user.id;
+
+    let existing = null;
+    if (isUUID(lessonId)) {
+      const resData = await supabase.from('lessons').select('*').eq('id', lessonId).single();
+      if (!resData.error && resData.data) {
+        existing = resData.data;
+      }
     }
+    if (!existing && fallbackLessons.has(lessonId)) {
+      existing = fallbackLessons.get(lessonId);
+    }
+
+    if (!existing) {
+      return res.status(404).json({ success: false, message: 'Lesson plan not found.' });
+    }
+
+    if (existing.teacher_id !== userId && req.user.role !== 'admin') {
+      return res.status(403).json({ success: false, message: 'Access denied: You do not own this lesson plan.' });
+    }
+
+    if (isUUID(lessonId) && isUUID(userId)) {
+      await supabase.from('lessons').delete().eq('id', lessonId).eq('teacher_id', userId);
+    }
+    fallbackLessons.delete(lessonId);
     return res.json({ success: true, message: 'Lesson plan deleted.' });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message || 'Error deleting lesson plan' });

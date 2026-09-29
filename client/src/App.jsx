@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import Sidebar from './components/Sidebar';
 import { LoginPage, RegisterPage, ForgotPasswordPage, ResetPasswordPage } from './pages/AuthPages';
@@ -12,6 +12,10 @@ import DoubtSolverPage from './pages/DoubtSolverPage';
 import FlashcardsPage from './pages/FlashcardsPage';
 import QuizAttemptPage from './pages/QuizAttemptPage';
 import StudentProgressPage from './pages/StudentProgressPage';
+import CurriculumTwinPage from './pages/CurriculumTwinPage';
+import ActionCenterPage from './pages/ActionCenterPage';
+import MasteryCheckPage from './pages/MasteryCheckPage';
+import WorkflowStudioPage from './pages/WorkflowStudioPage';
 
 // ponytail: declarative route guard for authentication & role permissions
 function ProtectedRoute({ user, allowedRoles, children }) {
@@ -24,44 +28,55 @@ function ProtectedRoute({ user, allowedRoles, children }) {
   return children;
 }
 
-export default function App() {
-  const [user, setUser] = useState(() => {
-    const saved = localStorage.getItem('eduflow_user');
-    return saved ? JSON.parse(saved) : null;
-  });
+function AppContent({ user, setUser }) {
+  const location = useLocation();
+  const isWorkflowStudio = location.pathname.startsWith('/workflow-studio');
 
   return (
-    <BrowserRouter>
-      <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-indigo-500 selection:text-white">
-        
-        {/* Navigation Header */}
-        <Navbar user={user} setUser={setUser} />
+    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-indigo-500 selection:text-white">
+      {/* Navigation Header */}
+      <Navbar user={user} setUser={setUser} />
 
-        {/* Main Content Body */}
-        <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 flex gap-8">
-          {user && <Sidebar user={user} />}
+      {/* Main Content Body */}
+      {isWorkflowStudio ? (
+        <main className="flex-1 w-full h-[calc(100vh-4rem)] flex flex-col overflow-hidden">
+          <Routes>
+            <Route
+              path="/workflow-studio"
+              element={
+                <ProtectedRoute user={user} allowedRoles={['teacher', 'student']}>
+                  <WorkflowStudioPage />
+                </ProtectedRoute>
+              }
+            />
+          </Routes>
+        </main>
+      ) : (
+        <>
+          <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 flex gap-8">
+            {user && <Sidebar user={user} />}
 
-          <div className="flex-1 min-w-0">
-            <Routes>
-              {/* Auth Routes */}
-              <Route path="/login" element={user ? <Navigate to="/" replace /> : <LoginPage setUser={setUser} />} />
-              <Route path="/register" element={user ? <Navigate to="/" replace /> : <RegisterPage setUser={setUser} />} />
+            <div className="flex-1 min-w-0">
+              <Routes>
+                {/* Auth Routes */}
+                <Route path="/login" element={user ? <Navigate to="/" replace /> : <LoginPage setUser={setUser} />} />
+                <Route path="/register" element={user ? <Navigate to="/" replace /> : <RegisterPage setUser={setUser} />} />
 
-              {/* Dashboard Home Route (Role-based) */}
-              <Route
-                path="/"
-                element={
-                  user ? (
-                    user.role === 'teacher' ? (
-                      <TeacherDashboard user={user} />
+                {/* Dashboard Home Route (Role-based) */}
+                <Route
+                  path="/"
+                  element={
+                    user ? (
+                      user.role === 'teacher' ? (
+                        <TeacherDashboard user={user} />
+                      ) : (
+                        <StudentDashboard user={user} />
+                      )
                     ) : (
-                      <StudentDashboard user={user} />
+                      <Navigate to="/login" replace />
                     )
-                  ) : (
-                    <Navigate to="/login" replace />
-                  )
-                }
-              />
+                  }
+                />
 
               {/* Teacher Routes */}
               <Route
@@ -85,6 +100,22 @@ export default function App() {
                 element={
                   <ProtectedRoute user={user} allowedRoles={['teacher']}>
                     <ClassAnalyticsPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/curriculum-twin"
+                element={
+                  <ProtectedRoute user={user} allowedRoles={['teacher']}>
+                    <CurriculumTwinPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/action-center"
+                element={
+                  <ProtectedRoute user={user} allowedRoles={['teacher']}>
+                    <ActionCenterPage />
                   </ProtectedRoute>
                 }
               />
@@ -122,6 +153,22 @@ export default function App() {
                   </ProtectedRoute>
                 }
               />
+              <Route
+                path="/mastery-check"
+                element={
+                  <ProtectedRoute user={user} allowedRoles={['student']}>
+                    <MasteryCheckPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/workflow-studio"
+                element={
+                  <ProtectedRoute user={user} allowedRoles={['teacher', 'student']}>
+                    <WorkflowStudioPage />
+                  </ProtectedRoute>
+                }
+              />
 
               {/* Password Reset Routes (public) */}
               <Route path="/forgot-password" element={<ForgotPasswordPage />} />
@@ -138,8 +185,21 @@ export default function App() {
         <footer className="border-t border-slate-900 py-6 text-center text-xs text-slate-500 glass-card">
           <p>EduFlow AI © 2026 — IBM Hackathon Project powered by IBM watsonx.ai (Granite 13B & 20B)</p>
         </footer>
+      </>
+    )}
+  </div>
+  );
+}
 
-      </div>
+export default function App() {
+  const [user, setUser] = useState(() => {
+    const saved = localStorage.getItem('eduflow_user');
+    return saved ? JSON.parse(saved) : null;
+  });
+
+  return (
+    <BrowserRouter>
+      <AppContent user={user} setUser={setUser} />
     </BrowserRouter>
   );
 }

@@ -17,6 +17,7 @@ class TelemetryService {
     latencyMs,
     success,
     fallbackUsed = false,
+    executionState = 'LIVE_AI',
     validationPassed = true,
     error = null
   }) {
@@ -29,6 +30,7 @@ class TelemetryService {
       latencyMs: Math.round(latencyMs),
       success: Boolean(success),
       fallbackUsed: Boolean(fallbackUsed),
+      executionState,
       validationPassed: Boolean(validationPassed),
       errorMessage: error ? String(error).substring(0, 150) : null
     };
@@ -44,23 +46,28 @@ class TelemetryService {
   getMetrics() {
     const total = this.requests.length;
     const successful = this.requests.filter(r => r.success).length;
-    const ibmCalls = this.requests.filter(r => r.provider === 'ibm_bob').length;
-    const fallbackCalls = this.requests.filter(r => r.fallbackUsed).length;
+    const watsonxCalls = this.requests.filter(r => r.provider === 'ibm_watsonx').length;
+    const hfGraniteCalls = this.requests.filter(r => r.provider === 'ibm_granite_hf').length;
+    const geminiCalls = this.requests.filter(r => r.provider === 'gemini').length;
+    const fallbackCalls = this.requests.filter(r => r.fallbackUsed || r.provider === 'curriculum_engine').length;
     const validationFailures = this.requests.filter(r => !r.validationPassed).length;
     
     const totalLatency = this.requests.reduce((acc, r) => acc + (r.latencyMs || 0), 0);
     const avgLatencyMs = total > 0 ? Math.round(totalLatency / total) : 0;
 
-    const lastSuccess = this.requests.find(r => r.success && r.provider === 'ibm_bob');
+    const lastIbmSuccess = this.requests.find(r => r.success && (r.provider === 'ibm_watsonx' || r.provider === 'ibm_granite_hf'));
 
     return {
       totalRequests: total,
       successfulRequests: successful,
-      ibmBobRequests: ibmCalls,
+      watsonxRequests: watsonxCalls,
+      hfGraniteRequests: hfGraniteCalls,
+      ibmGraniteTotal: watsonxCalls + hfGraniteCalls,
+      geminiRequests: geminiCalls,
       fallbackRequests: fallbackCalls,
       validationFailures,
       avgLatencyMs,
-      lastIbmSuccess: lastSuccess ? lastSuccess.timestamp : null,
+      lastIbmSuccess: lastIbmSuccess ? lastIbmSuccess.timestamp : null,
       recentRequests: this.requests.slice(0, 10),
       uptimeSeconds: Math.round((Date.now() - this.startTime) / 1000)
     };

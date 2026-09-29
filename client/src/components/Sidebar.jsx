@@ -10,7 +10,10 @@ import {
   LineChart, 
   Sparkles, 
   Zap, 
-  GraduationCap 
+  GraduationCap,
+  Network,
+  Crosshair,
+  Target
 } from 'lucide-react';
 
 export default function Sidebar({ user }) {
@@ -19,6 +22,9 @@ export default function Sidebar({ user }) {
 
   const teacherNav = [
     { name: 'Dashboard', path: '/', icon: LayoutDashboard },
+    { name: 'AI Workflow Studio', path: '/workflow-studio', icon: Sparkles, tag: 'Visual' },
+    { name: 'Action Center', path: '/action-center', icon: Crosshair, tag: 'Intervene' },
+    { name: 'Curriculum Twin', path: '/curriculum-twin', icon: Network, tag: 'Graph' },
     { name: 'Lesson Planner (F1)', path: '/lesson-planner', icon: BookOpen, tag: 'AI' },
     { name: 'Quiz Builder (F2)', path: '/quiz-builder', icon: FileCheck2, tag: 'Auto' },
     { name: 'Class Analytics (F8)', path: '/analytics', icon: BarChart3 }
@@ -26,6 +32,8 @@ export default function Sidebar({ user }) {
 
   const studentNav = [
     { name: 'Dashboard', path: '/', icon: LayoutDashboard },
+    { name: 'AI Workflow Studio', path: '/workflow-studio', icon: Sparkles, tag: 'Visual' },
+    { name: 'Mastery Check', path: '/mastery-check', icon: Target, tag: 'Verify' },
     { name: 'AI Doubt Solver (F4)', path: '/doubt-solver', icon: MessageSquareCode, tag: 'Live Chat' },
     { name: 'Flashcards & Summary (F5)', path: '/flashcards', icon: Layers, tag: 'Cards' },
     { name: 'Quizzes & Practice (F6)', path: '/quizzes', icon: Zap },

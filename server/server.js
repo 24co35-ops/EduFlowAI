@@ -1,3 +1,5 @@
+const path = require('path');
+require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
@@ -51,6 +53,8 @@ app.use(['/api/auth', '/auth'], authLimiter, require('./routes/auth.routes'));
 app.use(['/api/lessons', '/lessons'], require('./routes/lesson.routes'));
 app.use(['/api/quizzes', '/quizzes'], require('./routes/quiz.routes'));
 app.use(['/api/student', '/student'], require('./routes/student.routes'));
+app.use(['/api/curriculum', '/curriculum'], require('./routes/curriculum.routes'));
+app.use(['/api/interventions', '/interventions'], require('./routes/intervention.routes'));
 
 // Healthcheck & Diagnostic Provider Status
 app.get(['/api/health', '/health'], (req, res) => {
@@ -59,12 +63,14 @@ app.get(['/api/health', '/health'], (req, res) => {
 
   const payload = {
     status: 'online',
-    appName: 'EduFlow AI Enterprise Backend',
+    appName: 'EduFlow AI Curriculum & Intervention Intelligence Backend',
     supabaseConfigured: isSupabaseConfigured(),
     databaseConnected: isSupabaseConfigured(),
     databaseProvider: 'Supabase Postgres',
     timestamp: new Date().toISOString(),
-    primaryProvider: 'IBM BOB (watsonx.ai Granite 13B & 20B)',
+    primaryProvider: healthInfo.primaryProvider,
+    providerType: healthInfo.providerType,
+    watsonxConfigured: healthInfo.watsonxConfigured,
     ibmBobConfigured: bobService.isConfigured()
   };
 
@@ -93,11 +99,12 @@ app.use((err, req, res, next) => {
 // Start listener only when run directly as main script
 if (require.main === module && process.env.VERCEL !== '1') {
   const PORT = process.env.PORT || 5000;
+  const healthInfo = aiService.getHealthStatus();
   app.listen(PORT, () => {
     console.log(`==================================================`);
     console.log(`🚀 EduFlow AI Backend Server running on port ${PORT}`);
-    console.log(`⚡ IBM BOB watsonx.ai Engine: ${bobService.isConfigured() ? 'LIVE API KEY CONNECTED' : 'OFFLINE DEMO / SMART FALLBACK ACTIVE'}`);
-    console.log(`⚡ Models: Granite 13B (Instruct/Chat) & Granite 20B (Multilingual)`);
+    console.log(`⚡ AI Engine: ${healthInfo.primaryProvider} [${healthInfo.providerType}]`);
+    console.log(`⚡ Models: Granite 13B / 3.x Instruct & Chat, Granite 20B Multilingual`);
     console.log(`⚡ Database: ${isSupabaseConfigured() ? 'Supabase Postgres Connected' : 'In-Memory Demo Mode'}`);
     console.log(`==================================================`);
   });
