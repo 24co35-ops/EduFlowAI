@@ -70,7 +70,9 @@ export default function Navbar({ user, setUser }) {
             
             {/* Logo & Title */}
             <Link to="/" className="flex items-center gap-3 group" onClick={() => setMobileMenuOpen(false)}>
-              <img src="/logo.jpg" alt="EduFlow AI Logo" className="w-11 h-11 object-contain" />
+              <div className="w-11 h-11 overflow-hidden flex-shrink-0">
+                <img src="/logo.jpg" alt="EduFlow AI Logo" className="w-full h-auto object-top" style={{ marginTop: '-2px' }} />
+              </div>
               <div>
                 <div className="flex items-center gap-2">
                   <span className="serif-display text-xl font-bold tracking-tight">
